@@ -33,3 +33,9 @@ Thumbs.db
 
 # Uploaded files (if any get saved locally)
 uploads/
+
+# Settings file (contains API keys)
+settings.json
+
+# Request log (contains sensitive request data)
+request_log.txt

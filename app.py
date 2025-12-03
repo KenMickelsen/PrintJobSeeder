@@ -13,6 +13,7 @@ import json
 import threading
 import uuid
 import logging
+import base64
 from flask import Flask, render_template, request, jsonify, Response
 from werkzeug.utils import secure_filename
 import requests
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Helper for immediate console output - writes to file AND stderr
 import sys
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'request_log.txt')
+SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
 
 def log(message):
     """Print message to file and console"""
@@ -46,6 +48,122 @@ def log(message):
     # Also try stderr
     sys.stderr.write(line + '\n')
     sys.stderr.flush()
+
+# API Cloud Link region mappings
+CLOUD_REGIONS = {
+    'US': {
+        'name': 'US',
+        'domain': 'printercloud.com',
+        'url': 'https://external-api.app.printercloud.com/v1/print'
+    },
+    'EMEA': {
+        'name': 'EMEA',
+        'domain': 'printercloud5.com',
+        'url': 'https://external-api.app.printercloud5.com/v1/print'
+    },
+    'ASIAPAC': {
+        'name': 'ASIAPAC',
+        'domain': 'printercloud10.com',
+        'url': 'https://external-api.app.printercloud10.com/v1/print'
+    },
+    'CANADA': {
+        'name': 'CANADA',
+        'domain': 'printercloud15.com',
+        'url': 'https://external-api.app.printercloud15.com/v1/print'
+    },
+    'SE-ASIAPAC': {
+        'name': 'SE-ASIAPAC',
+        'domain': 'printercloud20.com',
+        'url': 'https://external-api.app.printercloud20.com/v1/print'
+    },
+    'US-NOW': {
+        'name': 'US-NOW',
+        'domain': 'printercloudnow.com',
+        'url': 'https://external-api.app.printercloudnow.com/v1/print'
+    }
+}
+
+def get_default_settings():
+    """Return default settings structure"""
+    return {
+        'cloud_link': {
+            'region': '',
+            'api_key': ''
+        },
+        'on_premise': {
+            'server': '',
+            'protocol': 'https',
+            'port': '443',
+            'bearer_token': ''
+        }
+    }
+
+def load_settings():
+    """Load settings from file"""
+    try:
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                saved = json.load(f)
+                # Merge with defaults to ensure all keys exist
+                defaults = get_default_settings()
+                for section in defaults:
+                    if section not in saved:
+                        saved[section] = defaults[section]
+                    else:
+                        for key in defaults[section]:
+                            if key not in saved[section]:
+                                saved[section][key] = defaults[section][key]
+                return saved
+    except Exception as e:
+        log(f"Error loading settings: {e}")
+    return get_default_settings()
+
+def save_settings(settings):
+    """Save settings to file"""
+    try:
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except Exception as e:
+        log(f"Error saving settings: {e}")
+        return False
+
+def obfuscate_key(key):
+    """Simple obfuscation for API keys (not true encryption, but prevents casual viewing)"""
+    if not key:
+        return ''
+    return base64.b64encode(key.encode()).decode()
+
+def deobfuscate_key(obfuscated):
+    """Reverse the obfuscation"""
+    if not obfuscated:
+        return ''
+    try:
+        return base64.b64decode(obfuscated.encode()).decode()
+    except:
+        return obfuscated  # Return as-is if not obfuscated
+
+def build_onprem_url(settings):
+    """Build the on-premise URL from settings"""
+    onprem = settings.get('on_premise', {})
+    server = onprem.get('server', '').strip()
+    protocol = onprem.get('protocol', 'https')
+    port = onprem.get('port', '443').strip()
+    
+    if not server:
+        return None
+    
+    # Build URL: protocol://server:port/v1/print
+    url = f"{protocol}://{server}"
+    if port and port not in ['80', '443']:
+        url += f":{port}"
+    elif port == '80' and protocol == 'https':
+        url += f":{port}"
+    elif port == '443' and protocol == 'http':
+        url += f":{port}"
+    url += "/v1/print"
+    
+    return url
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size (multiple industry uploads)
@@ -713,11 +831,152 @@ job_results = []
 @app.route('/')
 def index():
     """Render the main web interface"""
+    settings = load_settings()
+    # Don't expose actual API keys to frontend, just whether they're set
+    settings_status = {
+        'cloud_link': {
+            'region': settings['cloud_link'].get('region', ''),
+            'has_api_key': bool(settings['cloud_link'].get('api_key', ''))
+        },
+        'on_premise': {
+            'server': settings['on_premise'].get('server', ''),
+            'protocol': settings['on_premise'].get('protocol', 'https'),
+            'port': settings['on_premise'].get('port', '443'),
+            'has_bearer_token': bool(settings['on_premise'].get('bearer_token', ''))
+        }
+    }
     return render_template('index.html', 
                           presets=INDUSTRY_PRESETS, 
                           username_presets=USERNAME_PRESETS,
                           industries=INDUSTRIES,
-                          industry_names=INDUSTRY_DISPLAY_NAMES)
+                          industry_names=INDUSTRY_DISPLAY_NAMES,
+                          cloud_regions=CLOUD_REGIONS,
+                          settings_status=settings_status)
+
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """Get current settings (with keys masked)"""
+    settings = load_settings()
+    # Return masked version
+    return jsonify({
+        'cloud_link': {
+            'region': settings['cloud_link'].get('region', ''),
+            'api_key_set': bool(settings['cloud_link'].get('api_key', ''))
+        },
+        'on_premise': {
+            'server': settings['on_premise'].get('server', ''),
+            'protocol': settings['on_premise'].get('protocol', 'https'),
+            'port': settings['on_premise'].get('port', '443'),
+            'bearer_token_set': bool(settings['on_premise'].get('bearer_token', ''))
+        },
+        'cloud_regions': CLOUD_REGIONS
+    })
+
+
+@app.route('/api/settings', methods=['POST'])
+def update_settings():
+    """Update settings"""
+    try:
+        data = request.get_json()
+        current_settings = load_settings()
+        
+        # Update cloud link settings
+        if 'cloud_link' in data:
+            cl = data['cloud_link']
+            if 'region' in cl:
+                current_settings['cloud_link']['region'] = cl['region']
+            if 'api_key' in cl and cl['api_key'] is not None:
+                # Only update if a new key is provided (not empty string means clear, None means keep existing)
+                current_settings['cloud_link']['api_key'] = obfuscate_key(cl['api_key'])
+        
+        # Update on-premise settings
+        if 'on_premise' in data:
+            op = data['on_premise']
+            if 'server' in op:
+                current_settings['on_premise']['server'] = op['server']
+            if 'protocol' in op:
+                current_settings['on_premise']['protocol'] = op['protocol']
+            if 'port' in op:
+                current_settings['on_premise']['port'] = op['port']
+            if 'bearer_token' in op and op['bearer_token'] is not None:
+                current_settings['on_premise']['bearer_token'] = obfuscate_key(op['bearer_token'])
+        
+        if save_settings(current_settings):
+            return jsonify({'success': True, 'message': 'Settings saved'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to save settings'}), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/settings/validate', methods=['GET'])
+def validate_settings():
+    """Validate current settings for each destination type"""
+    settings = load_settings()
+    
+    cloud_valid = bool(
+        settings['cloud_link'].get('region') and 
+        settings['cloud_link'].get('api_key')
+    )
+    cloud_region = settings['cloud_link'].get('region', '')
+    cloud_url = CLOUD_REGIONS.get(cloud_region, {}).get('url', '') if cloud_region else ''
+    
+    onprem_valid = bool(settings['on_premise'].get('server'))
+    onprem_url = build_onprem_url(settings) if onprem_valid else ''
+    onprem_has_token = bool(settings['on_premise'].get('bearer_token'))
+    
+    return jsonify({
+        'cloud_link': {
+            'valid': cloud_valid,
+            'region': cloud_region,
+            'url': cloud_url,
+            'missing': [] if cloud_valid else (
+                ['region'] if not settings['cloud_link'].get('region') else []
+            ) + (
+                ['api_key'] if not settings['cloud_link'].get('api_key') else []
+            )
+        },
+        'on_premise': {
+            'valid': onprem_valid,
+            'url': onprem_url,
+            'has_token': onprem_has_token,
+            'missing': ['server'] if not onprem_valid else []
+        }
+    })
+
+
+@app.route('/api/settings/get-auth', methods=['POST'])
+def get_auth_for_destination():
+    """Get the authentication token for a specific destination type (internal use only)"""
+    try:
+        data = request.get_json()
+        dest_type = data.get('type')
+        settings = load_settings()
+        
+        if dest_type == 'cloud':
+            api_key = deobfuscate_key(settings['cloud_link'].get('api_key', ''))
+            region = settings['cloud_link'].get('region', '')
+            url = CLOUD_REGIONS.get(region, {}).get('url', '')
+            return jsonify({
+                'success': True,
+                'url': url,
+                'token': api_key
+            })
+        elif dest_type == 'onprem':
+            token = deobfuscate_key(settings['on_premise'].get('bearer_token', ''))
+            url = build_onprem_url(settings)
+            return jsonify({
+                'success': True,
+                'url': url,
+                'token': token
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Invalid destination type'}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/presets', methods=['GET'])

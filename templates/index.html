@@ -561,9 +561,401 @@
         .pdf-source-section.active {
             display: block;
         }
+
+        /* Settings Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 16px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: #1a1a2e;
+            z-index: 1;
+        }
+
+        .modal-header h2 {
+            color: #00d9ff;
+            font-size: 1.4em;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #ff4757;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .modal-section {
+            margin-bottom: 30px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .modal-section h3 {
+            color: #00d9ff;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-section p {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            position: sticky;
+            bottom: 0;
+            background: #1a1a2e;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #00d9ff, #0099cc);
+            color: #fff;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+        }
+
+        /* Destination Selector */
+        .destination-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .destination-option {
+            flex: 1;
+            min-width: 200px;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .destination-option:hover {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .destination-option.selected {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .destination-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .destination-option .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .destination-option .title {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .destination-option .subtitle {
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .destination-option .status {
+            margin-top: 10px;
+            font-size: 0.85em;
+            padding: 4px 10px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .destination-option .status.configured {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+
+        .destination-option .status.not-configured {
+            background: rgba(255, 200, 0, 0.2);
+            color: #ffc800;
+        }
+
+        .destination-details {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .destination-details.visible {
+            display: block;
+        }
+
+        .destination-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        .destination-info .url {
+            font-family: monospace;
+            color: #00d9ff;
+        }
+
+        .settings-link {
+            color: #00d9ff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .settings-link:hover {
+            color: #00ffff;
+        }
+
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #00d9ff;
+        }
+
+        .warning-box {
+            background: rgba(255, 200, 0, 0.1);
+            border: 1px solid rgba(255, 200, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-top: 15px;
+            color: #ffc800;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .warning-box.visible {
+            display: block;
+        }
+
+        .warning-box a {
+            color: #00d9ff;
+            cursor: pointer;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 1em;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .inline-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .inline-row .form-group {
+            flex: 1;
+        }
+
+        .inline-row .form-group.small {
+            flex: 0 0 120px;
+        }
     </style>
 </head>
 <body>
+    <!-- Settings Button -->
+    <button class="settings-btn" id="openSettingsBtn">⚙️ Settings</button>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚙️ Settings</h2>
+                <button class="modal-close" id="closeSettingsBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- API Cloud Link Section -->
+                <div class="modal-section">
+                    <h3>☁️ API Cloud Link</h3>
+                    <p>Configure your Vasion Output cloud API settings. Select your region and enter your API key.</p>
+                    
+                    <div class="form-group">
+                        <label>Region</label>
+                        <select id="settings_cloud_region">
+                            <option value="">-- Select Region --</option>
+                            {% for key, region in cloud_regions.items() %}
+                            <option value="{{ key }}">{{ region.name }} ({{ region.domain }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="settings_cloud_api_key" placeholder="Enter your API key">
+                        <p style="color: #666; font-size: 0.85em; margin-top: 5px;">
+                            Leave blank to keep existing key, or enter a new key to update.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- On-premise Output Service Section -->
+                <div class="modal-section">
+                    <h3>🏢 On-premise Output Service</h3>
+                    <p>Configure your on-premise Vasion Output server settings.</p>
+                    
+                    <div class="inline-row">
+                        <div class="form-group small">
+                            <label>Protocol</label>
+                            <select id="settings_onprem_protocol">
+                                <option value="https">HTTPS</option>
+                                <option value="http">HTTP</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Server Address <span class="hint">(hostname, FQDN, or IP)</span></label>
+                            <input type="text" id="settings_onprem_server" placeholder="server.domain.com">
+                        </div>
+                        <div class="form-group small">
+                            <label>Port</label>
+                            <input type="text" id="settings_onprem_port" placeholder="443" value="443">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Bearer Token <span class="hint">(optional)</span></label>
+                        <input type="password" id="settings_onprem_token" placeholder="Enter bearer token if required">
+                        <p style="color: #666; font-size: 0.85em; margin-top: 5px;">
+                            Leave blank to keep existing token, or enter a new token to update.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelSettingsBtn">Cancel</button>
+                <button class="btn-save" id="saveSettingsBtn">💾 Save Settings</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1>🖨️ Print Job Seeder</h1>
@@ -571,19 +963,71 @@
         </header>
 
         <form id="jobForm" enctype="multipart/form-data">
-            <!-- Global Settings -->
+            <!-- API Destination Selection -->
             <div class="card">
-                <h2>🔗 API Configuration</h2>
-                <div class="row">
-                    <div class="form-group">
-                        <label>API URL <span class="hint">(include http:// or https://)</span></label>
-                        <input type="url" id="url" name="url" placeholder="https://external-api.app.printercloudnow.com/v1/print" required>
+                <h2>🔗 API Destination</h2>
+                <p style="color: #888; margin-bottom: 15px;">Choose where to send print jobs. Configure cloud or on-premise settings in <span class="settings-link" id="openSettingsFromCard">Settings</span>.</p>
+                
+                <div class="destination-selector">
+                    <div class="destination-option" data-dest="cloud" id="dest-cloud">
+                        <div class="icon">☁️</div>
+                        <div class="title">API Cloud Link</div>
+                        <div class="subtitle">Vasion Output Cloud</div>
+                        <div class="status not-configured" id="cloud-status">Not Configured</div>
                     </div>
-                    <div class="form-group">
-                        <label>Bearer Token / API Key <span class="hint">(optional)</span></label>
-                        <input type="password" id="bearer_token" name="bearer_token" placeholder="your-api-key-here">
+                    <div class="destination-option" data-dest="onprem" id="dest-onprem">
+                        <div class="icon">🏢</div>
+                        <div class="title">On-premise Output</div>
+                        <div class="subtitle">Local Server</div>
+                        <div class="status not-configured" id="onprem-status">Not Configured</div>
+                    </div>
+                    <div class="destination-option" data-dest="manual" id="dest-manual">
+                        <div class="icon">✏️</div>
+                        <div class="title">Manual</div>
+                        <div class="subtitle">Custom URL & Token</div>
+                        <div class="status configured">Always Available</div>
                     </div>
                 </div>
+
+                <!-- Destination Details -->
+                <div class="destination-details" id="dest-details-cloud">
+                    <div class="destination-info">
+                        <span>🌐 Region:</span>
+                        <span id="cloud-region-display">Not set</span>
+                        <span>|</span>
+                        <span>📡 URL:</span>
+                        <span class="url" id="cloud-url-display">-</span>
+                    </div>
+                </div>
+
+                <div class="destination-details" id="dest-details-onprem">
+                    <div class="destination-info">
+                        <span>📡 URL:</span>
+                        <span class="url" id="onprem-url-display">-</span>
+                    </div>
+                </div>
+
+                <div class="destination-details" id="dest-details-manual">
+                    <div class="row">
+                        <div class="form-group">
+                            <label>API URL <span class="hint">(include http:// or https://)</span></label>
+                            <input type="url" id="manual_url" name="manual_url" placeholder="https://external-api.app.printercloudnow.com/v1/print">
+                        </div>
+                        <div class="form-group">
+                            <label>Bearer Token / API Key <span class="hint">(optional)</span></label>
+                            <input type="password" id="manual_token" name="manual_token" placeholder="your-api-key-here">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box" id="dest-warning">
+                    ⚠️ <span id="dest-warning-text">Please configure settings first.</span>
+                    <a id="openSettingsFromWarning">Open Settings</a>
+                </div>
+
+                <input type="hidden" id="destination_type" name="destination_type" value="">
+                <input type="hidden" id="url" name="url" value="">
+                <input type="hidden" id="bearer_token" name="bearer_token" value="">
             </div>
 
             <!-- Timing Settings -->
@@ -684,6 +1128,8 @@
         const usernamePresets = {{ username_presets | tojson | safe }};
         const industries = {{ industries | tojson | safe }};
         const industryNames = {{ industry_names | tojson | safe }};
+        const cloudRegions = {{ cloud_regions | tojson | safe }};
+        const settingsStatus = {{ settings_status | tojson | safe }};
 
         // Track active industries
         let activeIndustries = new Set();
@@ -691,6 +1137,267 @@
         // Current session tracking
         let currentSessionId = null;
         let currentEventSource = null;
+        
+        // Current destination selection
+        let currentDestination = null;
+        let settingsCache = null;
+
+        // =====================================
+        // SETTINGS MANAGEMENT
+        // =====================================
+        
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('visible');
+            loadSettingsIntoModal();
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('visible');
+        }
+        
+        async function loadSettingsIntoModal() {
+            try {
+                const response = await fetch('/api/settings');
+                const data = await response.json();
+                
+                // Cloud Link settings
+                document.getElementById('settings_cloud_region').value = data.cloud_link.region || '';
+                document.getElementById('settings_cloud_api_key').value = '';
+                document.getElementById('settings_cloud_api_key').placeholder = 
+                    data.cloud_link.api_key_set ? '••••••••• (key is set)' : 'Enter your API key';
+                
+                // On-premise settings
+                document.getElementById('settings_onprem_protocol').value = data.on_premise.protocol || 'https';
+                document.getElementById('settings_onprem_server').value = data.on_premise.server || '';
+                document.getElementById('settings_onprem_port').value = data.on_premise.port || '443';
+                document.getElementById('settings_onprem_token').value = '';
+                document.getElementById('settings_onprem_token').placeholder = 
+                    data.on_premise.bearer_token_set ? '••••••••• (token is set)' : 'Enter bearer token if required';
+                
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+        
+        async function saveSettings() {
+            const cloudRegion = document.getElementById('settings_cloud_region').value;
+            const cloudApiKey = document.getElementById('settings_cloud_api_key').value;
+            const onpremProtocol = document.getElementById('settings_onprem_protocol').value;
+            const onpremServer = document.getElementById('settings_onprem_server').value;
+            const onpremPort = document.getElementById('settings_onprem_port').value;
+            const onpremToken = document.getElementById('settings_onprem_token').value;
+            
+            const payload = {
+                cloud_link: {
+                    region: cloudRegion
+                },
+                on_premise: {
+                    protocol: onpremProtocol,
+                    server: onpremServer,
+                    port: onpremPort
+                }
+            };
+            
+            // Only include API key if user entered a new one
+            if (cloudApiKey) {
+                payload.cloud_link.api_key = cloudApiKey;
+            }
+            
+            // Only include bearer token if user entered a new one
+            if (onpremToken) {
+                payload.on_premise.bearer_token = onpremToken;
+            }
+            
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    closeSettingsModal();
+                    // Refresh destination status
+                    await updateDestinationStatus();
+                    // Re-select current destination to update UI
+                    if (currentDestination) {
+                        selectDestination(currentDestination);
+                    }
+                } else {
+                    alert('Error saving settings: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('Error saving settings');
+            }
+        }
+        
+        // =====================================
+        // DESTINATION MANAGEMENT
+        // =====================================
+        
+        async function updateDestinationStatus() {
+            try {
+                const response = await fetch('/api/settings/validate');
+                settingsCache = await response.json();
+                
+                // Update Cloud Link status
+                const cloudStatusEl = document.getElementById('cloud-status');
+                const cloudOption = document.getElementById('dest-cloud');
+                if (settingsCache.cloud_link.valid) {
+                    cloudStatusEl.textContent = settingsCache.cloud_link.region;
+                    cloudStatusEl.className = 'status configured';
+                    cloudOption.classList.remove('disabled');
+                } else {
+                    cloudStatusEl.textContent = 'Not Configured';
+                    cloudStatusEl.className = 'status not-configured';
+                }
+                
+                // Update On-premise status
+                const onpremStatusEl = document.getElementById('onprem-status');
+                const onpremOption = document.getElementById('dest-onprem');
+                if (settingsCache.on_premise.valid) {
+                    onpremStatusEl.textContent = 'Configured';
+                    onpremStatusEl.className = 'status configured';
+                    onpremOption.classList.remove('disabled');
+                } else {
+                    onpremStatusEl.textContent = 'Not Configured';
+                    onpremStatusEl.className = 'status not-configured';
+                }
+                
+                // Update destination details if one is selected
+                if (currentDestination === 'cloud' && settingsCache.cloud_link.valid) {
+                    document.getElementById('cloud-region-display').textContent = settingsCache.cloud_link.region;
+                    document.getElementById('cloud-url-display').textContent = settingsCache.cloud_link.url;
+                }
+                if (currentDestination === 'onprem' && settingsCache.on_premise.valid) {
+                    document.getElementById('onprem-url-display').textContent = settingsCache.on_premise.url;
+                }
+                
+                return settingsCache;
+            } catch (error) {
+                console.error('Error updating destination status:', error);
+                return null;
+            }
+        }
+        
+        function selectDestination(dest) {
+            currentDestination = dest;
+            document.getElementById('destination_type').value = dest;
+            
+            // Update visual selection
+            document.querySelectorAll('.destination-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.dest === dest);
+            });
+            
+            // Hide all detail panels
+            document.querySelectorAll('.destination-details').forEach(panel => {
+                panel.classList.remove('visible');
+            });
+            
+            // Hide warning
+            document.getElementById('dest-warning').classList.remove('visible');
+            
+            // Show appropriate detail panel
+            if (dest === 'cloud') {
+                if (settingsCache && settingsCache.cloud_link.valid) {
+                    document.getElementById('dest-details-cloud').classList.add('visible');
+                    document.getElementById('cloud-region-display').textContent = settingsCache.cloud_link.region;
+                    document.getElementById('cloud-url-display').textContent = settingsCache.cloud_link.url;
+                } else {
+                    // Show warning
+                    const warning = document.getElementById('dest-warning');
+                    const missing = settingsCache?.cloud_link.missing || ['region', 'api_key'];
+                    document.getElementById('dest-warning-text').textContent = 
+                        `API Cloud Link requires: ${missing.join(', ')}. `;
+                    warning.classList.add('visible');
+                }
+            } else if (dest === 'onprem') {
+                if (settingsCache && settingsCache.on_premise.valid) {
+                    document.getElementById('dest-details-onprem').classList.add('visible');
+                    document.getElementById('onprem-url-display').textContent = settingsCache.on_premise.url;
+                } else {
+                    // Show warning
+                    const warning = document.getElementById('dest-warning');
+                    document.getElementById('dest-warning-text').textContent = 
+                        `On-premise Output Service requires: server address. `;
+                    warning.classList.add('visible');
+                }
+            } else if (dest === 'manual') {
+                document.getElementById('dest-details-manual').classList.add('visible');
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('printJobSeeder_destination', dest);
+        }
+        
+        async function getDestinationUrlAndToken() {
+            const dest = currentDestination;
+            
+            if (dest === 'manual') {
+                return {
+                    url: document.getElementById('manual_url').value,
+                    token: document.getElementById('manual_token').value
+                };
+            }
+            
+            // For cloud and onprem, fetch from server
+            try {
+                const response = await fetch('/api/settings/get-auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: dest === 'cloud' ? 'cloud' : 'onprem' })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    return { url: data.url, token: data.token };
+                }
+            } catch (error) {
+                console.error('Error getting auth:', error);
+            }
+            return { url: '', token: '' };
+        }
+        
+        // Event listeners for settings modal
+        document.getElementById('openSettingsBtn').addEventListener('click', openSettingsModal);
+        document.getElementById('openSettingsFromCard').addEventListener('click', openSettingsModal);
+        document.getElementById('openSettingsFromWarning').addEventListener('click', openSettingsModal);
+        document.getElementById('closeSettingsBtn').addEventListener('click', closeSettingsModal);
+        document.getElementById('cancelSettingsBtn').addEventListener('click', closeSettingsModal);
+        document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+        
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') {
+                closeSettingsModal();
+            }
+        });
+        
+        // Event listeners for destination selection
+        document.querySelectorAll('.destination-option').forEach(option => {
+            option.addEventListener('click', () => {
+                selectDestination(option.dataset.dest);
+            });
+        });
+        
+        // Initialize destination status on page load
+        (async function initDestination() {
+            await updateDestinationStatus();
+            
+            // Restore saved destination or prompt
+            const savedDest = localStorage.getItem('printJobSeeder_destination');
+            if (savedDest && (savedDest === 'manual' || 
+                (savedDest === 'cloud' && settingsCache?.cloud_link.valid) ||
+                (savedDest === 'onprem' && settingsCache?.on_premise.valid))) {
+                selectDestination(savedDest);
+            } else {
+                // No valid destination - show prompt
+                // Default to showing the manual option selected initially but don't fully select
+                // User needs to make a choice
+            }
+        })();
 
         // Check for existing session on page load
         async function checkExistingSession() {
@@ -1214,7 +1921,31 @@
             const summary = document.getElementById('summary');
             const errorMessage = document.getElementById('errorMessage');
             
-            // Validate
+            // Validate destination selection
+            if (!currentDestination) {
+                errorMessage.textContent = 'Error: Please select an API destination (Cloud, On-premise, or Manual).';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            
+            // Validate destination is properly configured
+            if (currentDestination === 'cloud' && (!settingsCache || !settingsCache.cloud_link.valid)) {
+                errorMessage.textContent = 'Error: API Cloud Link is not configured. Please configure it in Settings.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            if (currentDestination === 'onprem' && (!settingsCache || !settingsCache.on_premise.valid)) {
+                errorMessage.textContent = 'Error: On-premise Output Service is not configured. Please configure it in Settings.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            if (currentDestination === 'manual' && !document.getElementById('manual_url').value.trim()) {
+                errorMessage.textContent = 'Error: Please enter an API URL for Manual mode.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            
+            // Validate industry selection
             if (activeIndustries.size === 0) {
                 errorMessage.textContent = 'Error: Please select at least one industry.';
                 errorMessage.classList.add('visible');
@@ -1252,6 +1983,14 @@
                 }
             }
             
+            // Get URL and token based on destination
+            const destConfig = await getDestinationUrlAndToken();
+            if (!destConfig.url) {
+                errorMessage.textContent = 'Error: Could not determine API URL. Please check your settings.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            
             // Reset UI
             errorMessage.classList.remove('visible');
             submitBtn.disabled = true;
@@ -1271,8 +2010,8 @@
             
             // Prepare form data
             const formData = new FormData();
-            formData.append('url', document.getElementById('url').value);
-            formData.append('bearer_token', document.getElementById('bearer_token').value);
+            formData.append('url', destConfig.url);
+            formData.append('bearer_token', destConfig.token || '');
             formData.append('timing_mode', document.getElementById('timing_mode').value);
             formData.append('fixed_delay', document.getElementById('fixed_delay').value);
             formData.append('min_delay', document.getElementById('min_delay').value);
