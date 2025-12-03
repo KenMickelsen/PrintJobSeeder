@@ -1080,6 +1080,12 @@
                     tabContent.classList.add('active');
                 }
                 
+                // Auto-populate presets for this industry
+                const filenamesTextarea = tabContent.querySelector('.filenames-input');
+                const usernamesTextarea = tabContent.querySelector('.usernames-input');
+                filenamesTextarea.value = presets[industry].join(', ');
+                usernamesTextarea.value = usernamePresets[industry].join(', ');
+                
                 isFirst = false;
             });
             
