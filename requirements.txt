@@ -1,0 +1,5 @@
+flask>=2.3.0
+requests>=2.31.0
+requests-toolbelt>=1.0.0
+werkzeug>=2.3.0
+reportlab>=4.0.0
