@@ -104,6 +104,6 @@ Content-Type: multipart/form-data
 
 ## Notes
 
-- Jobs are sent with a 1-second delay between each to avoid overwhelming the server
+- Jobs are sent with a 1-second delay
 - The tool cycles through usernames, printers, and filenames in round-robin fashion
 - If you have more jobs than entries in any list, it will loop back to the beginning
