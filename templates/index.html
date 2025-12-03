@@ -484,6 +484,18 @@
 
             <div class="card">
                 <h2>👥 Job Settings</h2>
+                
+                <div class="form-group">
+                    <label>Username Preset <span class="hint">(click to load usernames)</span></label>
+                    <div class="preset-buttons">
+                        <button type="button" class="preset-btn username-preset-btn" data-industry="healthcare">🏥 Healthcare</button>
+                        <button type="button" class="preset-btn username-preset-btn" data-industry="manufacturing">🏭 Manufacturing</button>
+                        <button type="button" class="preset-btn username-preset-btn" data-industry="legal">⚖️ Legal</button>
+                        <button type="button" class="preset-btn username-preset-btn" data-industry="finance">💰 Finance</button>
+                        <button type="button" class="preset-btn username-preset-btn" data-industry="education">🎓 Education</button>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>Usernames <span class="hint">(comma-separated)</span></label>
                     <textarea id="usernames" name="usernames" placeholder="john.doe@company.com, jane.smith@company.com, bob.wilson@company.com" required></textarea>
@@ -524,6 +536,7 @@
     <script>
         // Industry presets passed from Flask
         const presets = {{ presets | tojson | safe }};
+        const usernamePresets = {{ username_presets | tojson | safe }};
 
         // Handle PDF source toggle
         document.querySelectorAll('.toggle-option').forEach(option => {
@@ -572,6 +585,21 @@
                 
                 // Fill the filenames textarea
                 document.getElementById('filenames').value = filenames.join(', ');
+            });
+        });
+
+        // Handle username preset buttons
+        document.querySelectorAll('.username-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const industry = btn.dataset.industry;
+                const usernames = usernamePresets[industry];
+                
+                // Update active state
+                document.querySelectorAll('.username-preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Fill the usernames textarea
+                document.getElementById('usernames').value = usernames.join(', ');
             });
         });
 

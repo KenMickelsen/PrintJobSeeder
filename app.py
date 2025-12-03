@@ -238,6 +238,120 @@ INDUSTRY_PRESETS = {
     ]
 }
 
+# Industry-specific username presets (with realistic domains)
+USERNAME_PRESETS = {
+    "healthcare": [
+        "sarah.johnson@mercyvalleymed.org",
+        "michael.chen@stlukeshealth.net",
+        "jennifer.williams@cedarpinemedical.org",
+        "david.martinez@regionalhealthpartners.com",
+        "emily.brown@sunrisehospital.net",
+        "robert.taylor@valleyviewclinic.org",
+        "amanda.garcia@healthfirstcare.com",
+        "christopher.lee@mountainmedgroup.net",
+        "jessica.anderson@riverbendhealth.org",
+        "matthew.wilson@communitycaremed.com",
+        "ashley.thomas@northstarmedical.net",
+        "daniel.jackson@lakesidehealth.org",
+        "stephanie.white@praborahealthcare.com",
+        "andrew.harris@blueskyclinic.net",
+        "nicole.martin@westendmedical.org",
+        "joshua.thompson@careloohospital.com",
+        "rachel.moore@greenvalleymed.net",
+        "brandon.clark@healthbridgecare.org",
+        "michelle.rodriguez@pinecrestmedical.com",
+        "kevin.lewis@harborviewhealth.net"
+    ],
+    "manufacturing": [
+        "james.miller@apexmanufacturing.com",
+        "linda.davis@precisionmetalworks.net",
+        "william.garcia@summitindustries.com",
+        "patricia.rodriguez@qualityforgeind.net",
+        "richard.martinez@steelcraftmfg.com",
+        "barbara.anderson@reliablemachine.net",
+        "joseph.taylor@industrialpro.com",
+        "susan.thomas@advancedalloys.net",
+        "charles.hernandez@primeproduction.com",
+        "margaret.moore@elitemanufacturing.net",
+        "thomas.jackson@techfabindustries.com",
+        "dorothy.martin@crestlineproducts.net",
+        "christopher.lee@solidstatemfg.com",
+        "nancy.white@pioneermachining.net",
+        "daniel.harris@vanguardind.com",
+        "karen.clark@northpointmfg.net",
+        "mark.lewis@blueribbonfab.com",
+        "betty.walker@keystoneworks.net",
+        "steven.hall@frontierproducts.com",
+        "helen.allen@dynamicmachine.net"
+    ],
+    "legal": [
+        "elizabeth.parker@sterlinglaw.com",
+        "william.brooks@hamiltonlegal.net",
+        "catherine.murphy@crossmanpartners.com",
+        "jonathan.cooper@meridianattorneys.net",
+        "victoria.reed@hargrovelaw.com",
+        "benjamin.ward@prestonlegalgroup.net",
+        "alexandra.price@fairfieldlaw.com",
+        "nicholas.kelly@summitlegaladvisors.net",
+        "samantha.hughes@cavanaughlegal.com",
+        "christopher.morgan@ridgewoodlaw.net",
+        "olivia.foster@chamberspartners.com",
+        "alexander.russell@northgatelegall.net",
+        "natalie.barnes@peakstonelaw.com",
+        "ryan.henderson@clearwaterlegal.net",
+        "katherine.coleman@granitelegall.com",
+        "tyler.jenkins@westbrooklawfirm.net",
+        "lauren.patterson@silverdalelegal.com",
+        "austin.simmons@baysidelawgroup.net",
+        "megan.butler@oakridgeattorneys.com",
+        "jacob.richardson@hartfordlegal.net"
+    ],
+    "finance": [
+        "robert.campbell@oakgrovebank.com",
+        "jennifer.mitchell@firsttrustfinancial.net",
+        "michael.roberts@capitalhillpartners.com",
+        "lisa.turner@bluestoneinvest.net",
+        "david.phillips@harborfinancial.com",
+        "maria.evans@summitcapitalgroup.net",
+        "james.edwards@northstarbanking.com",
+        "sandra.collins@keystonefinancial.net",
+        "john.stewart@clearviewwealth.com",
+        "nancy.sanchez@atlasfinancegroup.net",
+        "steven.morris@ridgelinebank.com",
+        "karen.rogers@premiuminvest.net",
+        "paul.reed@vanguardfinancial.com",
+        "donna.cook@ironwoodcapital.net",
+        "mark.morgan@pinnaclefinance.com",
+        "carol.bell@crescentbanking.net",
+        "george.murphy@silverlakewealth.com",
+        "ruth.bailey@horizonfinancial.net",
+        "edward.rivera@foundationcapital.com",
+        "sharon.cooper@tridentinvest.net"
+    ],
+    "education": [
+        "mary.johnson@oakwoodacademy.edu",
+        "james.smith@lincolnschools.org",
+        "patricia.williams@maplegrovesd.edu",
+        "john.brown@cedarvalleyschools.org",
+        "jennifer.jones@willowcreekusd.edu",
+        "michael.davis@pinehurstacademy.org",
+        "linda.miller@sunriselearning.edu",
+        "william.wilson@riversideschools.org",
+        "elizabeth.moore@brightpathacademy.edu",
+        "david.taylor@greenmeadowsd.org",
+        "barbara.anderson@hillcrestschools.edu",
+        "richard.thomas@valleycrestlearning.org",
+        "susan.jackson@lakesideacademy.edu",
+        "joseph.white@mountainviewusd.org",
+        "margaret.harris@clearwaterschools.edu",
+        "charles.martin@forestgroveed.org",
+        "dorothy.thompson@springdaleschools.edu",
+        "thomas.garcia@horizonacademy.org",
+        "nancy.martinez@westfieldlearning.edu",
+        "daniel.robinson@northwoodschools.org"
+    ]
+}
+
 # Industry-specific content templates for PDF generation
 INDUSTRY_CONTENT = {
     "healthcare": {
@@ -555,13 +669,13 @@ job_results = []
 @app.route('/')
 def index():
     """Render the main web interface"""
-    return render_template('index.html', presets=INDUSTRY_PRESETS)
+    return render_template('index.html', presets=INDUSTRY_PRESETS, username_presets=USERNAME_PRESETS)
 
 
 @app.route('/api/presets', methods=['GET'])
 def get_presets():
     """Return industry presets as JSON"""
-    return jsonify(INDUSTRY_PRESETS)
+    return jsonify({'filenames': INDUSTRY_PRESETS, 'usernames': USERNAME_PRESETS})
 
 
 @app.route('/api/send-jobs', methods=['POST'])
