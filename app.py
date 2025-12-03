@@ -9,7 +9,11 @@ import time
 import random
 import tempfile
 import shutil
-from flask import Flask, render_template, request, jsonify
+import json
+import threading
+import uuid
+import logging
+from flask import Flask, render_template, request, jsonify, Response
 from werkzeug.utils import secure_filename
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -20,9 +24,49 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+# Helper for immediate console output - writes to file AND stderr
+import sys
+LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'request_log.txt')
+
+def log(message):
+    """Print message to file and console"""
+    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+    line = f"[{timestamp}] {message}"
+    # Write to file
+    with open(LOG_FILE, 'a', encoding='utf-8') as f:
+        f.write(line + '\n')
+    # Also try stderr
+    sys.stderr.write(line + '\n')
+    sys.stderr.flush()
+
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size (multiple industry uploads)
 app.config['UPLOAD_FOLDER'] = tempfile.mkdtemp()
+
+# Test log at startup
+log("PrintJobSeeder starting up - logging initialized")
+
+# Store active job sessions for streaming results
+job_sessions = {}
+
+# Available industries
+INDUSTRIES = ['healthcare', 'manufacturing', 'legal', 'finance', 'education']
+
+INDUSTRY_DISPLAY_NAMES = {
+    'healthcare': '🏥 Healthcare',
+    'manufacturing': '🏭 Manufacturing', 
+    'legal': '⚖️ Legal',
+    'finance': '💰 Finance',
+    'education': '🎓 Education'
+}
 
 # Industry-specific filename presets (with realistic identifiers)
 INDUSTRY_PRESETS = {
@@ -669,122 +713,487 @@ job_results = []
 @app.route('/')
 def index():
     """Render the main web interface"""
-    return render_template('index.html', presets=INDUSTRY_PRESETS, username_presets=USERNAME_PRESETS)
+    return render_template('index.html', 
+                          presets=INDUSTRY_PRESETS, 
+                          username_presets=USERNAME_PRESETS,
+                          industries=INDUSTRIES,
+                          industry_names=INDUSTRY_DISPLAY_NAMES)
 
 
 @app.route('/api/presets', methods=['GET'])
 def get_presets():
     """Return industry presets as JSON"""
-    return jsonify({'filenames': INDUSTRY_PRESETS, 'usernames': USERNAME_PRESETS})
+    return jsonify({
+        'filenames': INDUSTRY_PRESETS, 
+        'usernames': USERNAME_PRESETS,
+        'industries': INDUSTRIES,
+        'industry_names': INDUSTRY_DISPLAY_NAMES
+    })
 
 
+def generate_random_delay(timing_mode, fixed_delay=1.0, min_delay=0.5, max_delay=120.0):
+    """Generate a delay based on timing mode"""
+    if timing_mode == 'fixed':
+        return fixed_delay
+    elif timing_mode == 'random':
+        # Use exponential distribution weighted toward shorter delays
+        # This creates "bursts" with occasional longer gaps
+        rand = random.random()
+        if rand < 0.5:
+            # 50% chance: quick succession (0.5-3 seconds)
+            return random.uniform(0.5, 3.0)
+        elif rand < 0.8:
+            # 30% chance: moderate gap (3-30 seconds)
+            return random.uniform(3.0, 30.0)
+        else:
+            # 20% chance: longer gap (30 seconds to max_delay)
+            return random.uniform(30.0, min(max_delay, 180.0))
+    return 1.0
+
+
+@app.route('/api/start-jobs', methods=['POST'])
+def start_jobs():
+    """Initialize a job session and return session ID for streaming"""
+    global job_sessions
+    
+    log("=== /api/start-jobs called ===")
+    
+    try:
+        # Get global settings
+        url = request.form.get('url', '').strip()
+        bearer_token = request.form.get('bearer_token', '').strip()
+        log(f"URL: {url}")
+        log(f"Bearer token present: {bool(bearer_token)}")
+        
+        # Timing settings
+        timing_mode = request.form.get('timing_mode', 'fixed')
+        fixed_delay = float(request.form.get('fixed_delay', 1.0))
+        min_delay = float(request.form.get('min_delay', 0.5))
+        max_delay = float(request.form.get('max_delay', 120.0))
+        
+        # Get active industries from JSON
+        industry_configs_json = request.form.get('industry_configs', '{}')
+        industry_configs = json.loads(industry_configs_json)
+        
+        if not url:
+            return jsonify({'success': False, 'error': 'URL is required'}), 400
+        
+        if not industry_configs:
+            return jsonify({'success': False, 'error': 'At least one industry must be configured'}), 400
+        
+        # Build job queue from all industries
+        all_jobs = []
+        temp_files = {}  # Store uploaded files per industry
+        
+        for industry, config in industry_configs.items():
+            num_jobs = int(config.get('num_jobs', 0))
+            if num_jobs <= 0:
+                continue
+                
+            usernames = [u.strip() for u in config.get('usernames', '').split(',') if u.strip()]
+            printers = [p.strip() for p in config.get('printers', '').split(',') if p.strip()]
+            filenames = [f.strip() for f in config.get('filenames', '').split(',') if f.strip()]
+            pdf_source = config.get('pdf_source', 'generate')
+            min_pages = int(config.get('min_pages', 1))
+            max_pages = int(config.get('max_pages', 15))
+            
+            if not usernames:
+                return jsonify({'success': False, 'error': f'{industry}: At least one username is required'}), 400
+            if not printers:
+                return jsonify({'success': False, 'error': f'{industry}: At least one printer is required'}), 400
+            if not filenames:
+                return jsonify({'success': False, 'error': f'{industry}: At least one filename is required'}), 400
+            
+            # Handle file upload for this industry
+            temp_path = None
+            if pdf_source == 'upload':
+                file_key = f'file_{industry}'
+                if file_key in request.files:
+                    file = request.files[file_key]
+                    if file.filename:
+                        original_filename = secure_filename(file.filename)
+                        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{industry}_{original_filename}')
+                        file.save(temp_path)
+                        temp_files[industry] = temp_path
+                
+                if not temp_path:
+                    return jsonify({'success': False, 'error': f'{industry}: No file uploaded'}), 400
+            
+            # Create jobs for this industry
+            for i in range(num_jobs):
+                job = {
+                    'industry': industry,
+                    'username': usernames[i % len(usernames)],
+                    'printer': printers[i % len(printers)],
+                    'filename': filenames[i % len(filenames)],
+                    'pdf_source': pdf_source,
+                    'min_pages': min_pages,
+                    'max_pages': max_pages,
+                    'temp_path': temp_path
+                }
+                # Ensure filename ends with .pdf
+                if not job['filename'].lower().endswith('.pdf'):
+                    job['filename'] += '.pdf'
+                all_jobs.append(job)
+        
+        if not all_jobs:
+            return jsonify({'success': False, 'error': 'No jobs to send'}), 400
+        
+        # Shuffle jobs to interleave industries naturally
+        random.shuffle(all_jobs)
+        
+        # Create session
+        session_id = str(uuid.uuid4())
+        job_sessions[session_id] = {
+            'jobs': all_jobs,
+            'results': [],
+            'status': 'ready',
+            'total': len(all_jobs),
+            'completed': 0,
+            'url': url,
+            'bearer_token': bearer_token,
+            'timing_mode': timing_mode,
+            'fixed_delay': fixed_delay,
+            'min_delay': min_delay,
+            'max_delay': max_delay,
+            'temp_files': temp_files,
+            'stop_requested': False,
+            'created_at': time.time()
+        }
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'total_jobs': len(all_jobs)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/stop-jobs/<session_id>', methods=['POST'])
+def stop_jobs(session_id):
+    """Stop a running job session"""
+    global job_sessions
+    
+    if session_id not in job_sessions:
+        return jsonify({'success': False, 'error': 'Session not found'}), 404
+    
+    session = job_sessions[session_id]
+    session['stop_requested'] = True
+    session['status'] = 'stopping'
+    
+    return jsonify({
+        'success': True,
+        'message': 'Stop requested',
+        'completed': session['completed'],
+        'total': session['total']
+    })
+
+
+@app.route('/api/session-status/<session_id>')
+def session_status(session_id):
+    """Get the current status of a job session (for reconnection)"""
+    global job_sessions
+    
+    if session_id not in job_sessions:
+        return jsonify({'success': False, 'error': 'Session not found'}), 404
+    
+    session = job_sessions[session_id]
+    
+    return jsonify({
+        'success': True,
+        'status': session['status'],
+        'total': session['total'],
+        'completed': session['completed'],
+        'results': session['results'],
+        'stop_requested': session.get('stop_requested', False)
+    })
+
+
+@app.route('/api/stream-jobs/<session_id>')
+def stream_jobs(session_id):
+    """Stream job results using Server-Sent Events"""
+    log(f"=== /api/stream-jobs/{session_id} called ===")
+    
+    def generate():
+        global job_sessions
+        log(f"Generator started for session {session_id}")
+        
+        if session_id not in job_sessions:
+            log(f"Session {session_id} not found!")
+            yield f"data: {json.dumps({'error': 'Session not found'})}\n\n"
+            return
+        
+        session = job_sessions[session_id]
+        session['status'] = 'running'
+        log(f"Session found. Jobs: {len(session['jobs'])}")
+        
+        all_jobs = session['jobs']
+        url = session['url']
+        bearer_token = session['bearer_token']
+        timing_mode = session['timing_mode']
+        fixed_delay = session['fixed_delay']
+        min_delay = session['min_delay']
+        max_delay = session['max_delay']
+        temp_files = session['temp_files']
+        total_jobs = len(all_jobs)
+        
+        for i, job in enumerate(all_jobs):
+            # Check if stop was requested
+            if session.get('stop_requested', False):
+                session['status'] = 'stopped'
+                success_count = sum(1 for r in session['results'] if r['success'])
+                yield f"data: {json.dumps({'type': 'stopped', 'success_count': success_count, 'completed': session['completed'], 'total': total_jobs})}\n\n"
+                # Clean up temp files
+                for temp_path in temp_files.values():
+                    if temp_path and os.path.exists(temp_path):
+                        os.remove(temp_path)
+                return
+            
+            try:
+                log(f"Processing job {i + 1}/{total_jobs}: {job['filename']} for {job['username']}")
+                if job['pdf_source'] == 'generate':
+                    # Generate a new PDF for each job
+                    pdf_buffer = generate_pdf(job['filename'], job['industry'], job['min_pages'], job['max_pages'])
+                    log(f"PDF generated, calling send_single_job_from_buffer...")
+                    result = send_single_job_from_buffer(
+                        url=url,
+                        bearer_token=bearer_token,
+                        file_buffer=pdf_buffer,
+                        filename=job['filename'],
+                        username=job['username'],
+                        printer=job['printer'],
+                        job_number=i + 1,
+                        industry=job['industry']
+                    )
+                else:
+                    # Use uploaded file
+                    new_file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'job_{i}_{job["filename"]}')
+                    shutil.copy(job['temp_path'], new_file_path)
+                    
+                    result = send_single_job(
+                        url=url,
+                        bearer_token=bearer_token,
+                        file_path=new_file_path,
+                        filename=job['filename'],
+                        username=job['username'],
+                        printer=job['printer'],
+                        job_number=i + 1,
+                        industry=job['industry']
+                    )
+                    
+                    # Clean up the renamed file copy
+                    if os.path.exists(new_file_path):
+                        os.remove(new_file_path)
+                
+                session['results'].append(result)
+                session['completed'] = i + 1
+                
+                # Send result to client
+                yield f"data: {json.dumps({'type': 'job_result', 'result': result, 'progress': (i + 1) / total_jobs * 100})}\n\n"
+                
+                # Apply delay between jobs (except for the last one)
+                if i < total_jobs - 1:
+                    # Check stop during delay (check every 0.5 seconds)
+                    delay = generate_random_delay(timing_mode, fixed_delay, min_delay, max_delay)
+                    # Send delay info to client
+                    yield f"data: {json.dumps({'type': 'delay', 'seconds': round(delay, 1)})}\n\n"
+                    
+                    # Sleep in small increments to allow stop checking
+                    elapsed = 0
+                    while elapsed < delay:
+                        if session.get('stop_requested', False):
+                            break
+                        sleep_time = min(0.5, delay - elapsed)
+                        time.sleep(sleep_time)
+                        elapsed += sleep_time
+                    
+            except Exception as e:
+                error_result = {
+                    'job_number': i + 1,
+                    'success': False,
+                    'status_code': None,
+                    'filename': job['filename'],
+                    'username': job['username'],
+                    'printer': job['printer'],
+                    'industry': job['industry'],
+                    'response': str(e)
+                }
+                session['results'].append(error_result)
+                session['completed'] = i + 1
+                yield f"data: {json.dumps({'type': 'job_result', 'result': error_result, 'progress': (i + 1) / total_jobs * 100})}\n\n"
+        
+        # Clean up temp files
+        for temp_path in temp_files.values():
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+        
+        # Send completion message
+        success_count = sum(1 for r in session['results'] if r['success'])
+        yield f"data: {json.dumps({'type': 'complete', 'success_count': success_count, 'total': total_jobs})}\n\n"
+        
+        session['status'] = 'complete'
+        
+        # Clean up session after a delay (keep it around longer for reconnection)
+        def cleanup():
+            time.sleep(300)  # Keep session for 5 minutes for reconnection
+            if session_id in job_sessions:
+                del job_sessions[session_id]
+        threading.Thread(target=cleanup, daemon=True).start()
+    
+    return Response(generate(), mimetype='text/event-stream', headers={
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+    })
+
+
+# Keep the old endpoint for backwards compatibility but mark deprecated
 @app.route('/api/send-jobs', methods=['POST'])
 def send_jobs():
-    """Handle the print job submission"""
+    """Handle the print job submission for multiple industries (deprecated - use start-jobs + stream-jobs)"""
     global job_results
     job_results = []
     
     try:
-        # Get form data
+        # Get global settings
         url = request.form.get('url', '').strip()
         bearer_token = request.form.get('bearer_token', '').strip()
-        usernames = [u.strip() for u in request.form.get('usernames', '').split(',') if u.strip()]
-        printers = [p.strip() for p in request.form.get('printers', '').split(',') if p.strip()]
-        filenames = [f.strip() for f in request.form.get('filenames', '').split(',') if f.strip()]
-        num_jobs = int(request.form.get('num_jobs', 1))
         
-        # PDF source options
-        pdf_source = request.form.get('pdf_source', 'upload')
-        industry = request.form.get('industry', 'healthcare')
-        min_pages = int(request.form.get('min_pages', 1))
-        max_pages = int(request.form.get('max_pages', 15))
+        # Timing settings
+        timing_mode = request.form.get('timing_mode', 'fixed')
+        fixed_delay = float(request.form.get('fixed_delay', 1.0))
+        min_delay = float(request.form.get('min_delay', 0.5))
+        max_delay = float(request.form.get('max_delay', 120.0))
         
-        # Validate required fields
+        # Get active industries from JSON
+        industry_configs_json = request.form.get('industry_configs', '{}')
+        industry_configs = json.loads(industry_configs_json)
+        
         if not url:
             return jsonify({'success': False, 'error': 'URL is required'}), 400
-        if not usernames:
-            return jsonify({'success': False, 'error': 'At least one username is required'}), 400
-        if not printers:
-            return jsonify({'success': False, 'error': 'At least one printer is required'}), 400
-        if not filenames:
-            return jsonify({'success': False, 'error': 'At least one filename is required'}), 400
         
-        temp_path = None
+        if not industry_configs:
+            return jsonify({'success': False, 'error': 'At least one industry must be configured'}), 400
         
-        # Handle file source
-        if pdf_source == 'upload':
-            # Handle file upload
-            if 'file' not in request.files:
-                return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+        # Build job queue from all industries
+        all_jobs = []
+        temp_files = {}  # Store uploaded files per industry
+        
+        for industry, config in industry_configs.items():
+            num_jobs = int(config.get('num_jobs', 0))
+            if num_jobs <= 0:
+                continue
+                
+            usernames = [u.strip() for u in config.get('usernames', '').split(',') if u.strip()]
+            printers = [p.strip() for p in config.get('printers', '').split(',') if p.strip()]
+            filenames = [f.strip() for f in config.get('filenames', '').split(',') if f.strip()]
+            pdf_source = config.get('pdf_source', 'generate')
+            min_pages = int(config.get('min_pages', 1))
+            max_pages = int(config.get('max_pages', 15))
             
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({'success': False, 'error': 'No file selected'}), 400
+            if not usernames:
+                return jsonify({'success': False, 'error': f'{industry}: At least one username is required'}), 400
+            if not printers:
+                return jsonify({'success': False, 'error': f'{industry}: At least one printer is required'}), 400
+            if not filenames:
+                return jsonify({'success': False, 'error': f'{industry}: At least one filename is required'}), 400
             
-            # Save the uploaded file temporarily
-            original_filename = secure_filename(file.filename)
-            temp_path = os.path.join(app.config['UPLOAD_FOLDER'], original_filename)
-            file.save(temp_path)
+            # Handle file upload for this industry
+            temp_path = None
+            if pdf_source == 'upload':
+                file_key = f'file_{industry}'
+                if file_key in request.files:
+                    file = request.files[file_key]
+                    if file.filename:
+                        original_filename = secure_filename(file.filename)
+                        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{industry}_{original_filename}')
+                        file.save(temp_path)
+                        temp_files[industry] = temp_path
+                
+                if not temp_path:
+                    return jsonify({'success': False, 'error': f'{industry}: No file uploaded'}), 400
+            
+            # Create jobs for this industry
+            for i in range(num_jobs):
+                job = {
+                    'industry': industry,
+                    'username': usernames[i % len(usernames)],
+                    'printer': printers[i % len(printers)],
+                    'filename': filenames[i % len(filenames)],
+                    'pdf_source': pdf_source,
+                    'min_pages': min_pages,
+                    'max_pages': max_pages,
+                    'temp_path': temp_path
+                }
+                # Ensure filename ends with .pdf
+                if not job['filename'].lower().endswith('.pdf'):
+                    job['filename'] += '.pdf'
+                all_jobs.append(job)
+        
+        if not all_jobs:
+            return jsonify({'success': False, 'error': 'No jobs to send'}), 400
+        
+        # Shuffle jobs to interleave industries naturally
+        random.shuffle(all_jobs)
         
         # Send the jobs
         results = []
-        for i in range(num_jobs):
-            # Round-robin selection
-            username = usernames[i % len(usernames)]
-            printer = printers[i % len(printers)]
-            filename = filenames[i % len(filenames)]
-            
-            # Ensure filename ends with .pdf
-            if not filename.lower().endswith('.pdf'):
-                filename += '.pdf'
-            
-            if pdf_source == 'generate':
+        total_jobs = len(all_jobs)
+        
+        for i, job in enumerate(all_jobs):
+            if job['pdf_source'] == 'generate':
                 # Generate a new PDF for each job
-                pdf_buffer = generate_pdf(filename, industry, min_pages, max_pages)
+                pdf_buffer = generate_pdf(job['filename'], job['industry'], job['min_pages'], job['max_pages'])
                 result = send_single_job_from_buffer(
                     url=url,
                     bearer_token=bearer_token,
                     file_buffer=pdf_buffer,
-                    filename=filename,
-                    username=username,
-                    printer=printer,
-                    job_number=i + 1
+                    filename=job['filename'],
+                    username=job['username'],
+                    printer=job['printer'],
+                    job_number=i + 1,
+                    industry=job['industry']
                 )
             else:
-                # Use uploaded file - create a copy with the new name
-                new_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                shutil.copy(temp_path, new_file_path)
+                # Use uploaded file
+                new_file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'job_{i}_{job["filename"]}')
+                shutil.copy(job['temp_path'], new_file_path)
                 
                 result = send_single_job(
                     url=url,
                     bearer_token=bearer_token,
                     file_path=new_file_path,
-                    filename=filename,
-                    username=username,
-                    printer=printer,
-                    job_number=i + 1
+                    filename=job['filename'],
+                    username=job['username'],
+                    printer=job['printer'],
+                    job_number=i + 1,
+                    industry=job['industry']
                 )
                 
                 # Clean up the renamed file copy
-                if os.path.exists(new_file_path) and new_file_path != temp_path:
+                if os.path.exists(new_file_path):
                     os.remove(new_file_path)
             
             results.append(result)
             
-            # Delay between jobs (except for the last one)
-            if i < num_jobs - 1:
-                time.sleep(1)
+            # Apply delay between jobs (except for the last one)
+            if i < total_jobs - 1:
+                delay = generate_random_delay(timing_mode, fixed_delay, min_delay, max_delay)
+                time.sleep(delay)
         
-        # Clean up the original temp file if uploaded
-        if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
+        # Clean up temp files
+        for temp_path in temp_files.values():
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
         
         job_results = results
         success_count = sum(1 for r in results if r['success'])
         
         return jsonify({
             'success': True,
-            'message': f'Completed {success_count}/{num_jobs} jobs successfully',
+            'message': f'Completed {success_count}/{total_jobs} jobs successfully',
             'results': results
         })
         
@@ -792,7 +1201,7 @@ def send_jobs():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-def send_single_job(url, bearer_token, file_path, filename, username, printer, job_number):
+def send_single_job(url, bearer_token, file_path, filename, username, printer, job_number, industry=''):
     """Send a single print job to the API from a file path"""
     try:
         # Prepare headers
@@ -815,6 +1224,24 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
         
         headers['Content-Type'] = multipart_data.content_type
         
+        # Log the request details
+        log(f"")
+        log(f"{'='*60}")
+        log(f"JOB {job_number} - Sending request (from file)")
+        log(f"  URL: {url}")
+        log(f"  Method: POST")
+        log(f"  Headers:")
+        for key, value in headers.items():
+            if key.lower() == 'authorization':
+                log(f"    {key}: {value[:20]}..." if len(value) > 20 else f"    {key}: {value}")
+            else:
+                log(f"    {key}: {value}")
+        log(f"  Form Fields:")
+        log(f"    file: ({filename}, <{len(file_content)} bytes>, application/pdf)")
+        log(f"    queue: {printer}")
+        log(f"    copies: 1")
+        log(f"    username: {username}")
+        
         # Send the request
         response = requests.post(
             url,
@@ -823,6 +1250,15 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
             timeout=30
         )
         
+        # Log the response
+        log(f"  Response:")
+        log(f"    Status Code: {response.status_code}")
+        log(f"    Response Headers:")
+        for key, value in response.headers.items():
+            log(f"      {key}: {value}")
+        log(f"    Response Body: {response.text[:1000] if response.text else '(empty)'}")
+        log(f"{'='*60}")
+        
         return {
             'job_number': job_number,
             'success': response.status_code in [200, 201, 202],
@@ -830,6 +1266,7 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
             'filename': filename,
             'username': username,
             'printer': printer,
+            'industry': industry,
             'response': response.text[:500] if response.text else ''
         }
         
@@ -841,6 +1278,7 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
             'filename': filename,
             'username': username,
             'printer': printer,
+            'industry': industry,
             'response': 'Request timed out'
         }
     except Exception as e:
@@ -851,11 +1289,12 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
             'filename': filename,
             'username': username,
             'printer': printer,
+            'industry': industry,
             'response': str(e)
         }
 
 
-def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, username, printer, job_number):
+def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, username, printer, job_number, industry=''):
     """Send a single print job to the API from an in-memory buffer"""
     try:
         # Prepare headers
@@ -877,6 +1316,24 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
         
         headers['Content-Type'] = multipart_data.content_type
         
+        # Log the request details
+        log(f"")
+        log(f"{'='*60}")
+        log(f"JOB {job_number} - Sending request (generated PDF)")
+        log(f"  URL: {url}")
+        log(f"  Method: POST")
+        log(f"  Headers:")
+        for key, value in headers.items():
+            if key.lower() == 'authorization':
+                log(f"    {key}: {value[:20]}..." if len(value) > 20 else f"    {key}: {value}")
+            else:
+                log(f"    {key}: {value}")
+        log(f"  Form Fields:")
+        log(f"    file: ({filename}, <{len(file_content)} bytes>, application/pdf)")
+        log(f"    queue: {printer}")
+        log(f"    copies: 1")
+        log(f"    username: {username}")
+        
         # Send the request
         response = requests.post(
             url,
@@ -885,6 +1342,15 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
             timeout=30
         )
         
+        # Log the response
+        log(f"  Response:")
+        log(f"    Status Code: {response.status_code}")
+        log(f"    Response Headers:")
+        for key, value in response.headers.items():
+            log(f"      {key}: {value}")
+        log(f"    Response Body: {response.text[:1000] if response.text else '(empty)'}")
+        log(f"{'='*60}")
+        
         return {
             'job_number': job_number,
             'success': response.status_code in [200, 201, 202],
@@ -892,6 +1358,7 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
             'filename': filename,
             'username': username,
             'printer': printer,
+            'industry': industry,
             'response': response.text[:500] if response.text else ''
         }
         
@@ -903,6 +1370,7 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
             'filename': filename,
             'username': username,
             'printer': printer,
+            'industry': industry,
             'response': 'Request timed out'
         }
     except Exception as e:
@@ -913,6 +1381,7 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
             'filename': filename,
             'username': username,
             'printer': printer,
+            'industry': industry,
             'response': str(e)
         }
 

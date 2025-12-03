@@ -5,6 +5,17 @@ echo          Print Job Seeder - Vasion Output
 echo ==================================================
 echo.
 
+REM Kill any existing Python processes running app.py to avoid conflicts
+echo Checking for existing instances...
+for /f "tokens=2" %%a in ('tasklist /fi "imagename eq python.exe" /fo list ^| find "PID:"') do (
+    wmic process where "ProcessId=%%a" get CommandLine 2>nul | find "app.py" >nul
+    if not errorlevel 1 (
+        echo Stopping existing Print Job Seeder instance (PID: %%a)...
+        taskkill /PID %%a /F >nul 2>&1
+    )
+)
+echo.
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (

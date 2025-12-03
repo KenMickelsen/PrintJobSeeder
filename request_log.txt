@@ -1,0 +1,31 @@
+[2025-12-03 18:11:28] PrintJobSeeder starting up - logging initialized
+[2025-12-03 18:11:48] === /api/start-jobs called ===
+[2025-12-03 18:11:48] URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 18:11:48] Bearer token present: True
+[2025-12-03 18:11:48] === /api/stream-jobs/900a107e-94d7-406e-9d23-db9bdf13be95 called ===
+[2025-12-03 18:11:48] Generator started for session 900a107e-94d7-406e-9d23-db9bdf13be95
+[2025-12-03 18:11:48] Session found. Jobs: 1
+[2025-12-03 18:11:48] Processing job 1/1: Patient_Discharge_Summary_JSmith.pdf for sarah.johnson@mercyvalleymed.org
+[2025-12-03 18:11:48] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 18:11:48] 
+[2025-12-03 18:11:48] ============================================================
+[2025-12-03 18:11:48] JOB 1 - Sending request (generated PDF)
+[2025-12-03 18:11:48]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 18:11:48]   Method: POST
+[2025-12-03 18:11:48]   Headers:
+[2025-12-03 18:11:48]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 18:11:48]     Content-Type: multipart/form-data; boundary=96e4f1ebc5824bbb9518d23c6a5ba207
+[2025-12-03 18:11:48]   Form Fields:
+[2025-12-03 18:11:48]     file: (Patient_Discharge_Summary_JSmith.pdf, <2622 bytes>, application/pdf)
+[2025-12-03 18:11:48]     queue: Front Office
+[2025-12-03 18:11:48]     copies: 1
+[2025-12-03 18:11:48]     username: sarah.johnson@mercyvalleymed.org
+[2025-12-03 18:11:49]   Response:
+[2025-12-03 18:11:49]     Status Code: 202
+[2025-12-03 18:11:49]     Response Headers:
+[2025-12-03 18:11:49]       Date: Wed, 03 Dec 2025 23:11:49 GMT
+[2025-12-03 18:11:49]       Content-Type: application/json; charset=utf-8
+[2025-12-03 18:11:49]       Content-Length: 48
+[2025-12-03 18:11:49]       Connection: keep-alive
+[2025-12-03 18:11:49]     Response Body: {"jobID":"8af5f699-49dc-4c2e-b2ea-89d42ce18f86"}
+[2025-12-03 18:11:49] ============================================================
