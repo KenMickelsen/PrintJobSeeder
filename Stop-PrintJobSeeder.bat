@@ -5,23 +5,9 @@ echo        Stopping Print Job Seeder
 echo ==================================================
 echo.
 
-REM Kill all Python processes running app.py
-set FOUND=0
-for /f "tokens=2" %%a in ('tasklist /fi "imagename eq python.exe" /fo list 2^>nul ^| find "PID:"') do (
-    wmic process where "ProcessId=%%a" get CommandLine 2>nul | find "app.py" >nul
-    if not errorlevel 1 (
-        echo Stopping Print Job Seeder instance (PID: %%a)...
-        taskkill /PID %%a /F >nul 2>&1
-        set FOUND=1
-    )
-)
-
-if "%FOUND%"=="0" (
-    echo No Print Job Seeder instances found running.
-) else (
-    echo.
-    echo Print Job Seeder stopped successfully.
-)
+REM Use PowerShell for more reliable process detection and killing
+powershell -Command "& { $procs = Get-WmiObject Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*app.py*' }; if ($procs) { $procs | ForEach-Object { Write-Host \"Stopping Print Job Seeder (PID: $($_.ProcessId))...\"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Write-Host ''; Write-Host 'Print Job Seeder stopped successfully.' } else { Write-Host 'No Print Job Seeder instances found running.' } }"
 
 echo.
-pause
+echo Press any key to close this window...
+pause >nul

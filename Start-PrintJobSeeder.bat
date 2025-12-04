@@ -5,15 +5,12 @@ echo          Print Job Seeder - Vasion Output
 echo ==================================================
 echo.
 
+REM Change to script directory
+cd /d "%~dp0"
+
 REM Kill any existing Python processes running app.py to avoid conflicts
 echo Checking for existing instances...
-for /f "tokens=2" %%a in ('tasklist /fi "imagename eq python.exe" /fo list ^| find "PID:"') do (
-    wmic process where "ProcessId=%%a" get CommandLine 2>nul | find "app.py" >nul
-    if not errorlevel 1 (
-        echo Stopping existing Print Job Seeder instance (PID: %%a)...
-        taskkill /PID %%a /F >nul 2>&1
-    )
-)
+powershell -Command "& { $procs = Get-WmiObject Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*app.py*' }; if ($procs) { $procs | ForEach-Object { Write-Host \"Stopping existing instance (PID: $($_.ProcessId))...\"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } } }"
 echo.
 
 REM Check if Python is installed

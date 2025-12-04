@@ -6,6 +6,10 @@ A utility for sending bulk print jobs to Vasion Output's API with industry-speci
 
 - 🖨️ Send multiple print jobs to Vasion Output API
 - 🏢 **Multi-industry support** - Configure and send jobs for multiple industries simultaneously
+- 🔧 **Settings Management** - Persistent configuration for API credentials with secure storage
+- 🌐 **Multiple API Destinations** - Support for Vasion Cloud regions, on-premise servers, or manual URLs
+- 🤖 **Automate All Mode** - One-click automation that fetches printers and uses presets
+- 📥 **Get Printers from Vasion** - Fetch printer lists directly from the API by industry folder path
 - 📄 **Generate PDFs on-the-fly** with variable page counts (1-15 pages) and industry-specific content
 - 📁 Upload your own PDF or let the tool generate realistic documents
 - ⏱️ **Flexible timing options** - Fixed delays or randomized "natural" timing to simulate real users
@@ -30,35 +34,91 @@ A utility for sending bulk print jobs to Vasion Output's API with industry-speci
    - Start the Flask server
    - Automatically open the web interface in your browser
 
-2. **Configure Global Settings:**
-   - Enter your Vasion Output API URL
-   - (Optional) Enter your Bearer token if authentication is required
-   - Choose timing mode:
-     - **Fixed Delay**: Consistent delay between jobs (configurable seconds)
-     - **Natural/Random**: Randomized delays simulating real user behavior (bursts + gaps)
+2. **Configure Settings (gear icon):**
+   - **API Cloud Link**: Select your Vasion Cloud region and enter your API key
+   - **On-Premise Output Service**: Configure server address, protocol, port, and bearer token
+   - **Industry Folder Paths**: Set wildcard paths for fetching printers (e.g., `*Healthcare*`)
+   
+   > 💡 Get your API key from the Vasion Admin Console: **Tools > Tokens > API Keys**
 
-3. **Select Industries:**
+3. **Select API Destination:**
+   - **API Cloud Link**: Use Vasion's cloud service (US, EMEA, ASIAPAC, Canada, SE-ASIAPAC, US-NOW)
+   - **On-Premise Output Service**: Connect to your own Output server
+   - **Manual**: Enter a custom URL and token directly
+
+4. **Select Industries:**
    - Check one or more industries (Healthcare, Manufacturing, Legal, Finance, Education)
    - Each selected industry gets its own configuration tab
 
-4. **Configure Each Industry Tab:**
+5. **Quick Setup with Automate All:**
+   - Toggle "Automate All" to enable one-click automation
+   - Printers are automatically fetched from Vasion using folder paths
+   - Presets are applied for filenames and usernames
+   - Just set "Jobs per industry" and click Send!
+
+6. **Or Configure Each Industry Manually:**
    - Choose PDF source (Generate or Upload)
-   - Use preset filenames or enter custom ones
-   - Use preset usernames or enter custom ones
-   - Enter printer names for that industry
+   - Click "Get Printers from Vasion" or enter printer names manually
+   - Use preset filenames/usernames or enter custom ones
    - Set number of jobs for that industry
 
-5. **Click "Send Print Jobs"** and watch the progress!
+7. **Click "Send Print Jobs"** and watch the progress!
 
 ## Batch Scripts
 
-Three convenience scripts are provided for managing the application:
+Two convenience scripts are provided for managing the application:
 
 | Script | Purpose |
 |--------|---------|
 | `Start-PrintJobSeeder.bat` | Start the server (kills existing instances first, installs deps if needed) |
 | `Stop-PrintJobSeeder.bat` | Stop the server cleanly |
-| `Restart-PrintJobSeeder.bat` | Quick restart with log clearing (ideal for development) |
+
+## API Destinations
+
+The tool supports three ways to connect to Vasion Output:
+
+### API Cloud Link
+Connect to Vasion's cloud-hosted Output service. Supported regions:
+
+| Region | Domain |
+|--------|--------|
+| US | printercloud.com |
+| EMEA | printercloud5.com |
+| ASIAPAC | printercloud10.com |
+| Canada | printercloud15.com |
+| SE-ASIAPAC | printercloud20.com |
+| US-NOW | printercloudnow.com |
+
+### On-Premise Output Service
+Connect to your own self-hosted Output server. Configure:
+- Server address (hostname or IP)
+- Protocol (HTTP or HTTPS)
+- Port (default: 443 for HTTPS, 31990 for HTTP)
+- Bearer token (if required)
+
+### Manual
+Enter a custom API URL and token directly for testing or non-standard setups.
+
+## Automate All Mode
+
+For quick demos, enable "Automate All" to streamline the process:
+
+1. **Toggle Automate All** - The switch is in the industry selection card
+2. **Select Industries** - Check the industries you want
+3. **Printers Auto-Fetch** - The tool queries Vasion's API using the folder paths configured in Settings
+4. **Presets Applied** - Industry-specific filenames and usernames are used automatically
+5. **Set Jobs Per Industry** - Choose how many jobs to send for each selected industry
+6. **Send!** - One click sends jobs for all selected industries
+
+> ⚠️ Automate All requires API Cloud Link to be configured (with API key) for fetching printers.
+
+### Industry Folder Paths
+
+Configure folder path wildcards in Settings to tell the tool where to find printers for each industry. Examples:
+- `*Healthcare*` - Matches any folder containing "Healthcare"
+- `*Manufacturing*` - Matches any folder containing "Manufacturing"
+
+These paths are used with the `GET /v1/printers?path=...` API to fetch printer lists.
 
 ## Debugging & Logging
 
@@ -101,18 +161,29 @@ python app.py
 
 ## API Request Format
 
-The tool sends multipart form POST requests in this format:
+### Sending Print Jobs
+The tool sends multipart form POST requests to submit print jobs:
 
 ```
-POST {url}
-Authorization: {bearer_token}  (if provided)
+POST {base_url}/v1/jobs
+Authorization: Bearer {api_key_or_token}
 Content-Type: multipart/form-data
 
-- file: {uploaded PDF with new filename}
-- queue: {printer name}
+- file: {PDF file}
+- title: {printer name}
 - copies: "1"
 - username: {username}
 ```
+
+### Fetching Printers
+The tool can fetch printer lists from the Vasion API:
+
+```
+GET {base_url}/v1/printers?path={folder_path}&fields=id,title&limit=100
+Authorization: Bearer {api_key}
+```
+
+The `path` parameter supports wildcards (e.g., `*Healthcare*`) to filter printers by folder location.
 
 ## Industry Presets
 
@@ -203,3 +274,5 @@ This is useful for demos showing a mixed-use print environment (e.g., a hospital
 - Generated PDFs are created in memory and cleaned up automatically
 - All fake domains and names are fictional and not associated with real organizations
 - Jobs from multiple industries are interleaved randomly to simulate realistic mixed traffic
+- **Settings are stored locally** in `settings.json` - API keys are obfuscated (not plaintext) but treat this file as sensitive
+- The `settings.json` file is excluded from git via `.gitignore`

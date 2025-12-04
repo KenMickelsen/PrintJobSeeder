@@ -2175,7 +2175,7 @@
             warning.style.display = cloudConfigured ? 'none' : 'block';
             
             // Also update the checkbox state
-            const checkbox = document.getElementById('automateAll');
+            const checkbox = document.getElementById('automateAllToggle');
             if (checkbox && !cloudConfigured) {
                 checkbox.disabled = true;
                 checkbox.checked = false;
@@ -2209,16 +2209,25 @@
             });
             
             // Update jobs per industry visibility
-            const jobsContainer = document.getElementById('automate-jobs-container');
+            const jobsContainer = document.getElementById('automateJobsInput');
             if (jobsContainer) {
                 jobsContainer.style.display = enabled ? 'flex' : 'none';
             }
         }
         
         // Event listener for Automate All checkbox
-        document.getElementById('automateAll')?.addEventListener('change', (e) => {
-            toggleAutomateAll(e.target.checked);
+        document.getElementById('automateAllToggle')?.addEventListener('change', async (e) => {
+            const enabled = e.target.checked;
+            toggleAutomateAll(enabled);
+            
+            // Auto-fetch printers when enabling Automate All
+            if (enabled && activeIndustries.size > 0) {
+                await fetchPrintersForAllIndustries();
+            }
         });
+        
+        // Also add settings link handler for automate warning
+        document.getElementById('openSettingsFromAutomate')?.addEventListener('click', openSettingsModal);
         
         // =====================================
         // GET PRINTERS FUNCTIONALITY
@@ -2343,7 +2352,7 @@
 
         // Industry checkbox handlers
         document.querySelectorAll('.industry-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
+            checkbox.addEventListener('change', async () => {
                 const industry = checkbox.dataset.industry;
                 if (checkbox.checked) {
                     activeIndustries.add(industry);
@@ -2351,6 +2360,35 @@
                     activeIndustries.delete(industry);
                 }
                 updateTabs();
+                
+                // If Automate All is enabled and we added an industry, fetch its printers
+                if (checkbox.checked && automateAllEnabled) {
+                    // Small delay to let the tab render first
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Fetch printers for the newly added industry
+                    const response = await fetch(`/api/printers/${industry}`);
+                    const data = await response.json();
+                    
+                    if (data.success && data.printers.length > 0) {
+                        // Update the textarea
+                        const textarea = document.querySelector(`.printers-input[data-industry="${industry}"]`);
+                        if (textarea) {
+                            textarea.value = data.printers.join(', ');
+                        }
+                        
+                        // Update status indicators
+                        const statusSpan = document.getElementById(`printers-status-${industry}`);
+                        const statusIcon = document.getElementById(`printers-status-icon-${industry}`);
+                        if (statusSpan) {
+                            statusSpan.textContent = `${data.printers.length} printer(s) loaded`;
+                            if (statusIcon) {
+                                statusIcon.textContent = '✅';
+                                statusIcon.className = 'status-icon ready';
+                            }
+                        }
+                    }
+                }
             });
         });
 
@@ -2468,7 +2506,7 @@
                 }
                 
                 // Apply jobs per industry from automate settings
-                const jobsPerIndustry = parseInt(document.getElementById('jobsPerIndustry')?.value) || 10;
+                const jobsPerIndustry = parseInt(document.getElementById('automateJobCount')?.value) || 10;
                 activeIndustries.forEach(industry => {
                     const jobsInput = document.querySelector(`.num-jobs[data-industry="${industry}"]`);
                     if (jobsInput) {
