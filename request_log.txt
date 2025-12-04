@@ -1,494 +1,499 @@
-[2025-12-03 18:20:36] PrintJobSeeder starting up - logging initialized
-[2025-12-03 18:21:01] === /api/start-jobs called ===
-[2025-12-03 18:21:01] URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:01] Bearer token present: True
-[2025-12-03 18:21:01] === /api/stream-jobs/25eba865-5642-4225-96b5-d739a0600e69 called ===
-[2025-12-03 18:21:01] Generator started for session 25eba865-5642-4225-96b5-d739a0600e69
-[2025-12-03 18:21:01] Session found. Jobs: 10
-[2025-12-03 18:21:01] Processing job 1/10: Patient_Intake_NThompson.pdf for christopher.lee@mountainmedgroup.net
-[2025-12-03 18:21:01] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:01] 
-[2025-12-03 18:21:01] ============================================================
-[2025-12-03 18:21:01] JOB 1 - Sending request (generated PDF)
-[2025-12-03 18:21:01]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:01]   Method: POST
-[2025-12-03 18:21:01]   Headers:
-[2025-12-03 18:21:01]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:01]     Content-Type: multipart/form-data; boundary=5da6ff41030d49eba7e68d3e01b87168
-[2025-12-03 18:21:01]   Form Fields:
-[2025-12-03 18:21:01]     file: (Patient_Intake_NThompson.pdf, <11847 bytes>, application/pdf)
-[2025-12-03 18:21:01]     queue: Front Office
-[2025-12-03 18:21:01]     copies: 1
-[2025-12-03 18:21:01]     username: christopher.lee@mountainmedgroup.net
-[2025-12-03 18:21:02]   Response:
-[2025-12-03 18:21:02]     Status Code: 202
-[2025-12-03 18:21:02]     Response Headers:
-[2025-12-03 18:21:02]       Date: Wed, 03 Dec 2025 23:21:02 GMT
-[2025-12-03 18:21:02]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:02]       Content-Length: 48
-[2025-12-03 18:21:02]       Connection: keep-alive
-[2025-12-03 18:21:02]     Response Body: {"jobID":"f4560fcb-ba43-4c05-881a-aacef5fb220c"}
-[2025-12-03 18:21:02] ============================================================
-[2025-12-03 18:21:03] Processing job 2/10: Radiology_Report_BTaylor_XR4521.pdf for robert.taylor@valleyviewclinic.org
-[2025-12-03 18:21:03] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:03] 
-[2025-12-03 18:21:03] ============================================================
-[2025-12-03 18:21:03] JOB 2 - Sending request (generated PDF)
-[2025-12-03 18:21:03]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:03]   Method: POST
-[2025-12-03 18:21:03]   Headers:
-[2025-12-03 18:21:03]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:03]     Content-Type: multipart/form-data; boundary=f5fd7961d446464d958adf83d903b4ff
-[2025-12-03 18:21:03]   Form Fields:
-[2025-12-03 18:21:03]     file: (Radiology_Report_BTaylor_XR4521.pdf, <15623 bytes>, application/pdf)
-[2025-12-03 18:21:03]     queue: Front Office
-[2025-12-03 18:21:03]     copies: 1
-[2025-12-03 18:21:03]     username: robert.taylor@valleyviewclinic.org
-[2025-12-03 18:21:04]   Response:
-[2025-12-03 18:21:04]     Status Code: 202
-[2025-12-03 18:21:04]     Response Headers:
-[2025-12-03 18:21:04]       Date: Wed, 03 Dec 2025 23:21:04 GMT
-[2025-12-03 18:21:04]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:04]       Content-Length: 48
-[2025-12-03 18:21:04]       Connection: keep-alive
-[2025-12-03 18:21:04]     Response Body: {"jobID":"2fcad251-4abd-474d-b9bb-468eeb78d8a5"}
-[2025-12-03 18:21:04] ============================================================
-[2025-12-03 18:21:05] Processing job 3/10: Surgical_Consent_DMartin.pdf for amanda.garcia@healthfirstcare.com
-[2025-12-03 18:21:05] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:05] 
-[2025-12-03 18:21:05] ============================================================
-[2025-12-03 18:21:05] JOB 3 - Sending request (generated PDF)
-[2025-12-03 18:21:05]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:05]   Method: POST
-[2025-12-03 18:21:05]   Headers:
-[2025-12-03 18:21:05]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:05]     Content-Type: multipart/form-data; boundary=75ecb865d41b47078280d5ec7e996ba2
-[2025-12-03 18:21:05]   Form Fields:
-[2025-12-03 18:21:05]     file: (Surgical_Consent_DMartin.pdf, <11427 bytes>, application/pdf)
-[2025-12-03 18:21:05]     queue: Front Office
-[2025-12-03 18:21:05]     copies: 1
-[2025-12-03 18:21:05]     username: amanda.garcia@healthfirstcare.com
-[2025-12-03 18:21:06]   Response:
-[2025-12-03 18:21:06]     Status Code: 202
-[2025-12-03 18:21:06]     Response Headers:
-[2025-12-03 18:21:06]       Date: Wed, 03 Dec 2025 23:21:06 GMT
-[2025-12-03 18:21:06]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:06]       Content-Length: 48
-[2025-12-03 18:21:06]       Connection: keep-alive
-[2025-12-03 18:21:06]     Response Body: {"jobID":"4c9d2007-7b98-405f-b432-b80e422e44e4"}
-[2025-12-03 18:21:06] ============================================================
-[2025-12-03 18:21:07] Processing job 4/10: Medical_History_LAnderson.pdf for emily.brown@sunrisehospital.net
-[2025-12-03 18:21:07] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:07] 
-[2025-12-03 18:21:07] ============================================================
-[2025-12-03 18:21:07] JOB 4 - Sending request (generated PDF)
-[2025-12-03 18:21:07]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:07]   Method: POST
-[2025-12-03 18:21:07]   Headers:
-[2025-12-03 18:21:07]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:07]     Content-Type: multipart/form-data; boundary=c9d7b4ac1e7740a29f05ff2440e7e638
-[2025-12-03 18:21:07]   Form Fields:
-[2025-12-03 18:21:07]     file: (Medical_History_LAnderson.pdf, <9053 bytes>, application/pdf)
-[2025-12-03 18:21:07]     queue: Front Office
-[2025-12-03 18:21:07]     copies: 1
-[2025-12-03 18:21:07]     username: emily.brown@sunrisehospital.net
-[2025-12-03 18:21:08]   Response:
-[2025-12-03 18:21:08]     Status Code: 202
-[2025-12-03 18:21:08]     Response Headers:
-[2025-12-03 18:21:08]       Date: Wed, 03 Dec 2025 23:21:08 GMT
-[2025-12-03 18:21:08]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:08]       Content-Length: 48
-[2025-12-03 18:21:08]       Connection: keep-alive
-[2025-12-03 18:21:08]     Response Body: {"jobID":"475141d3-05e4-4cfc-88e0-d908f2d06823"}
-[2025-12-03 18:21:08] ============================================================
-[2025-12-03 18:21:09] Processing job 5/10: HIPAA_Authorization_SWhite.pdf for jessica.anderson@riverbendhealth.org
-[2025-12-03 18:21:09] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:09] 
-[2025-12-03 18:21:09] ============================================================
-[2025-12-03 18:21:09] JOB 5 - Sending request (generated PDF)
-[2025-12-03 18:21:09]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:09]   Method: POST
-[2025-12-03 18:21:09]   Headers:
-[2025-12-03 18:21:09]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:09]     Content-Type: multipart/form-data; boundary=639b5c1f5dcb487ebaaf59985023067a
-[2025-12-03 18:21:09]   Form Fields:
-[2025-12-03 18:21:09]     file: (HIPAA_Authorization_SWhite.pdf, <15488 bytes>, application/pdf)
-[2025-12-03 18:21:09]     queue: Front Office
-[2025-12-03 18:21:09]     copies: 1
-[2025-12-03 18:21:09]     username: jessica.anderson@riverbendhealth.org
-[2025-12-03 18:21:10]   Response:
-[2025-12-03 18:21:10]     Status Code: 202
-[2025-12-03 18:21:10]     Response Headers:
-[2025-12-03 18:21:10]       Date: Wed, 03 Dec 2025 23:21:10 GMT
-[2025-12-03 18:21:10]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:10]       Content-Length: 48
-[2025-12-03 18:21:10]       Connection: keep-alive
-[2025-12-03 18:21:10]     Response Body: {"jobID":"51e2591f-5723-4926-9ee7-50b2a1ba018f"}
-[2025-12-03 18:21:10] ============================================================
-[2025-12-03 18:21:11] Processing job 6/10: Prescription_Order_KJohnson.pdf for david.martinez@regionalhealthpartners.com
-[2025-12-03 18:21:11] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:11] 
-[2025-12-03 18:21:11] ============================================================
-[2025-12-03 18:21:11] JOB 6 - Sending request (generated PDF)
-[2025-12-03 18:21:11]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:11]   Method: POST
-[2025-12-03 18:21:11]   Headers:
-[2025-12-03 18:21:11]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:11]     Content-Type: multipart/form-data; boundary=095bcee0a1e146c7920085baa7fc5c43
-[2025-12-03 18:21:11]   Form Fields:
-[2025-12-03 18:21:11]     file: (Prescription_Order_KJohnson.pdf, <11834 bytes>, application/pdf)
-[2025-12-03 18:21:11]     queue: Front Office
-[2025-12-03 18:21:11]     copies: 1
-[2025-12-03 18:21:11]     username: david.martinez@regionalhealthpartners.com
-[2025-12-03 18:21:12]   Response:
-[2025-12-03 18:21:12]     Status Code: 202
-[2025-12-03 18:21:12]     Response Headers:
-[2025-12-03 18:21:12]       Date: Wed, 03 Dec 2025 23:21:12 GMT
-[2025-12-03 18:21:12]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:12]       Content-Length: 48
-[2025-12-03 18:21:12]       Connection: keep-alive
-[2025-12-03 18:21:12]     Response Body: {"jobID":"ce87956b-e172-4b50-80f0-5d145552b03c"}
-[2025-12-03 18:21:12] ============================================================
-[2025-12-03 18:21:13] Processing job 7/10: Lab_Results_RWilliams_1847.pdf for michael.chen@stlukeshealth.net
-[2025-12-03 18:21:13] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:13] 
-[2025-12-03 18:21:13] ============================================================
-[2025-12-03 18:21:13] JOB 7 - Sending request (generated PDF)
-[2025-12-03 18:21:13]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:13]   Method: POST
-[2025-12-03 18:21:13]   Headers:
-[2025-12-03 18:21:13]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:13]     Content-Type: multipart/form-data; boundary=6ca0474faa3946e6b32bb08ad8640325
-[2025-12-03 18:21:13]   Form Fields:
-[2025-12-03 18:21:13]     file: (Lab_Results_RWilliams_1847.pdf, <7020 bytes>, application/pdf)
-[2025-12-03 18:21:13]     queue: Front Office
-[2025-12-03 18:21:13]     copies: 1
-[2025-12-03 18:21:13]     username: michael.chen@stlukeshealth.net
-[2025-12-03 18:21:14]   Response:
-[2025-12-03 18:21:14]     Status Code: 202
-[2025-12-03 18:21:14]     Response Headers:
-[2025-12-03 18:21:14]       Date: Wed, 03 Dec 2025 23:21:14 GMT
-[2025-12-03 18:21:14]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:14]       Content-Length: 48
-[2025-12-03 18:21:14]       Connection: keep-alive
-[2025-12-03 18:21:14]     Response Body: {"jobID":"44111dec-e911-4464-9476-5ca4d636612e"}
-[2025-12-03 18:21:14] ============================================================
-[2025-12-03 18:21:15] Processing job 8/10: Insurance_Claim_MCarter_2024.pdf for jennifer.williams@cedarpinemedical.org
-[2025-12-03 18:21:15] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:15] 
-[2025-12-03 18:21:15] ============================================================
-[2025-12-03 18:21:15] JOB 8 - Sending request (generated PDF)
-[2025-12-03 18:21:15]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:15]   Method: POST
-[2025-12-03 18:21:15]   Headers:
-[2025-12-03 18:21:15]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:15]     Content-Type: multipart/form-data; boundary=1f421ee9c023406fbba64be4772882ac
-[2025-12-03 18:21:15]   Form Fields:
-[2025-12-03 18:21:15]     file: (Insurance_Claim_MCarter_2024.pdf, <6168 bytes>, application/pdf)
-[2025-12-03 18:21:15]     queue: Front Office
-[2025-12-03 18:21:15]     copies: 1
-[2025-12-03 18:21:15]     username: jennifer.williams@cedarpinemedical.org
-[2025-12-03 18:21:16]   Response:
-[2025-12-03 18:21:16]     Status Code: 202
-[2025-12-03 18:21:16]     Response Headers:
-[2025-12-03 18:21:16]       Date: Wed, 03 Dec 2025 23:21:16 GMT
-[2025-12-03 18:21:16]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:16]       Content-Length: 48
-[2025-12-03 18:21:16]       Connection: keep-alive
-[2025-12-03 18:21:16]     Response Body: {"jobID":"70050310-4a0a-4c70-b3ce-6ffac9406bf9"}
-[2025-12-03 18:21:16] ============================================================
-[2025-12-03 18:21:17] Processing job 9/10: Immunization_Record_JDavis_Peds.pdf for matthew.wilson@communitycaremed.com
-[2025-12-03 18:21:17] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:17] 
-[2025-12-03 18:21:17] ============================================================
-[2025-12-03 18:21:17] JOB 9 - Sending request (generated PDF)
-[2025-12-03 18:21:17]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:17]   Method: POST
-[2025-12-03 18:21:17]   Headers:
-[2025-12-03 18:21:17]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:17]     Content-Type: multipart/form-data; boundary=b269d944b3424459b577e190d0e9843d
-[2025-12-03 18:21:17]   Form Fields:
-[2025-12-03 18:21:17]     file: (Immunization_Record_JDavis_Peds.pdf, <27056 bytes>, application/pdf)
-[2025-12-03 18:21:17]     queue: Front Office
-[2025-12-03 18:21:17]     copies: 1
-[2025-12-03 18:21:17]     username: matthew.wilson@communitycaremed.com
-[2025-12-03 18:21:18]   Response:
-[2025-12-03 18:21:18]     Status Code: 202
-[2025-12-03 18:21:18]     Response Headers:
-[2025-12-03 18:21:18]       Date: Wed, 03 Dec 2025 23:21:18 GMT
-[2025-12-03 18:21:18]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:18]       Content-Length: 48
-[2025-12-03 18:21:18]       Connection: keep-alive
-[2025-12-03 18:21:18]     Response Body: {"jobID":"55c300fa-b916-4a90-ab8b-42c8cd543dae"}
-[2025-12-03 18:21:18] ============================================================
-[2025-12-03 18:21:19] Processing job 10/10: Patient_Discharge_Summary_JSmith.pdf for sarah.johnson@mercyvalleymed.org
-[2025-12-03 18:21:19] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:21:19] 
-[2025-12-03 18:21:19] ============================================================
-[2025-12-03 18:21:19] JOB 10 - Sending request (generated PDF)
-[2025-12-03 18:21:19]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:21:19]   Method: POST
-[2025-12-03 18:21:19]   Headers:
-[2025-12-03 18:21:19]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:21:19]     Content-Type: multipart/form-data; boundary=a2b337a988d44345bf3f0fb5d655aaa0
-[2025-12-03 18:21:19]   Form Fields:
-[2025-12-03 18:21:19]     file: (Patient_Discharge_Summary_JSmith.pdf, <3503 bytes>, application/pdf)
-[2025-12-03 18:21:19]     queue: Front Office
-[2025-12-03 18:21:19]     copies: 1
-[2025-12-03 18:21:19]     username: sarah.johnson@mercyvalleymed.org
-[2025-12-03 18:21:20]   Response:
-[2025-12-03 18:21:20]     Status Code: 202
-[2025-12-03 18:21:20]     Response Headers:
-[2025-12-03 18:21:20]       Date: Wed, 03 Dec 2025 23:21:20 GMT
-[2025-12-03 18:21:20]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:21:20]       Content-Length: 48
-[2025-12-03 18:21:20]       Connection: keep-alive
-[2025-12-03 18:21:20]     Response Body: {"jobID":"c9103a3c-17b3-40d6-af97-5eeb7a05cd1f"}
-[2025-12-03 18:21:20] ============================================================
-[2025-12-03 18:43:34] PrintJobSeeder starting up - logging initialized
-[2025-12-03 18:44:38] === /api/start-jobs called ===
-[2025-12-03 18:44:38] URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:38] Bearer token present: True
-[2025-12-03 18:44:38] === /api/stream-jobs/836e4cd2-83f8-4808-a2b9-eb5e67bdd89f called ===
-[2025-12-03 18:44:38] Generator started for session 836e4cd2-83f8-4808-a2b9-eb5e67bdd89f
-[2025-12-03 18:44:38] Session found. Jobs: 10
-[2025-12-03 18:44:38] Processing job 1/10: Immunization_Record_JDavis_Peds.pdf for matthew.wilson@communitycaremed.com
-[2025-12-03 18:44:38] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:38] 
-[2025-12-03 18:44:38] ============================================================
-[2025-12-03 18:44:38] JOB 1 - Sending request (generated PDF)
-[2025-12-03 18:44:38]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:38]   Method: POST
-[2025-12-03 18:44:38]   Headers:
-[2025-12-03 18:44:38]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:38]     Content-Type: multipart/form-data; boundary=ab77ac8a749f452abf0b4e5e200abc58
-[2025-12-03 18:44:38]   Form Fields:
-[2025-12-03 18:44:38]     file: (Immunization_Record_JDavis_Peds.pdf, <8704 bytes>, application/pdf)
-[2025-12-03 18:44:38]     queue: Front Office
-[2025-12-03 18:44:38]     copies: 1
-[2025-12-03 18:44:38]     username: matthew.wilson@communitycaremed.com
-[2025-12-03 18:44:39]   Response:
-[2025-12-03 18:44:39]     Status Code: 202
-[2025-12-03 18:44:39]     Response Headers:
-[2025-12-03 18:44:39]       Date: Wed, 03 Dec 2025 23:44:39 GMT
-[2025-12-03 18:44:39]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:39]       Content-Length: 48
-[2025-12-03 18:44:39]       Connection: keep-alive
-[2025-12-03 18:44:39]     Response Body: {"jobID":"eb000d5d-9cee-4665-9223-fa130e3ae6cd"}
-[2025-12-03 18:44:39] ============================================================
-[2025-12-03 18:44:40] Processing job 2/10: Patient_Discharge_Summary_JSmith.pdf for sarah.johnson@mercyvalleymed.org
-[2025-12-03 18:44:40] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:40] 
-[2025-12-03 18:44:40] ============================================================
-[2025-12-03 18:44:40] JOB 2 - Sending request (generated PDF)
-[2025-12-03 18:44:40]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:40]   Method: POST
-[2025-12-03 18:44:40]   Headers:
-[2025-12-03 18:44:40]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:40]     Content-Type: multipart/form-data; boundary=8e497723c5f943979206dd2994ecbfcd
-[2025-12-03 18:44:40]   Form Fields:
-[2025-12-03 18:44:40]     file: (Patient_Discharge_Summary_JSmith.pdf, <16822 bytes>, application/pdf)
-[2025-12-03 18:44:40]     queue: Front Office
-[2025-12-03 18:44:40]     copies: 1
-[2025-12-03 18:44:40]     username: sarah.johnson@mercyvalleymed.org
-[2025-12-03 18:44:41]   Response:
-[2025-12-03 18:44:41]     Status Code: 202
-[2025-12-03 18:44:41]     Response Headers:
-[2025-12-03 18:44:41]       Date: Wed, 03 Dec 2025 23:44:41 GMT
-[2025-12-03 18:44:41]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:41]       Content-Length: 48
-[2025-12-03 18:44:41]       Connection: keep-alive
-[2025-12-03 18:44:41]     Response Body: {"jobID":"7d12cee7-51ed-4ed2-aad2-085724a455f2"}
-[2025-12-03 18:44:41] ============================================================
-[2025-12-03 18:44:42] Processing job 3/10: Prescription_Order_KJohnson.pdf for david.martinez@regionalhealthpartners.com
-[2025-12-03 18:44:42] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:42] 
-[2025-12-03 18:44:42] ============================================================
-[2025-12-03 18:44:42] JOB 3 - Sending request (generated PDF)
-[2025-12-03 18:44:42]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:42]   Method: POST
-[2025-12-03 18:44:42]   Headers:
-[2025-12-03 18:44:42]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:42]     Content-Type: multipart/form-data; boundary=367ad741c61e4e8bbb6b3a733f04233e
-[2025-12-03 18:44:42]   Form Fields:
-[2025-12-03 18:44:42]     file: (Prescription_Order_KJohnson.pdf, <21324 bytes>, application/pdf)
-[2025-12-03 18:44:42]     queue: Front Office
-[2025-12-03 18:44:42]     copies: 1
-[2025-12-03 18:44:42]     username: david.martinez@regionalhealthpartners.com
-[2025-12-03 18:44:43]   Response:
-[2025-12-03 18:44:43]     Status Code: 202
-[2025-12-03 18:44:43]     Response Headers:
-[2025-12-03 18:44:43]       Date: Wed, 03 Dec 2025 23:44:43 GMT
-[2025-12-03 18:44:43]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:43]       Content-Length: 48
-[2025-12-03 18:44:43]       Connection: keep-alive
-[2025-12-03 18:44:43]     Response Body: {"jobID":"6f40d5da-795c-49df-aa26-d8f7c8f20dea"}
-[2025-12-03 18:44:43] ============================================================
-[2025-12-03 18:44:44] Processing job 4/10: Medical_History_LAnderson.pdf for emily.brown@sunrisehospital.net
-[2025-12-03 18:44:44] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:44] 
-[2025-12-03 18:44:44] ============================================================
-[2025-12-03 18:44:44] JOB 4 - Sending request (generated PDF)
-[2025-12-03 18:44:44]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:44]   Method: POST
-[2025-12-03 18:44:44]   Headers:
-[2025-12-03 18:44:44]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:44]     Content-Type: multipart/form-data; boundary=7799c5c4c9cb48049072aaf2e78f67ba
-[2025-12-03 18:44:44]   Form Fields:
-[2025-12-03 18:44:44]     file: (Medical_History_LAnderson.pdf, <5527 bytes>, application/pdf)
-[2025-12-03 18:44:44]     queue: Front Office
-[2025-12-03 18:44:44]     copies: 1
-[2025-12-03 18:44:44]     username: emily.brown@sunrisehospital.net
-[2025-12-03 18:44:45]   Response:
-[2025-12-03 18:44:45]     Status Code: 202
-[2025-12-03 18:44:45]     Response Headers:
-[2025-12-03 18:44:45]       Date: Wed, 03 Dec 2025 23:44:45 GMT
-[2025-12-03 18:44:45]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:45]       Content-Length: 48
-[2025-12-03 18:44:45]       Connection: keep-alive
-[2025-12-03 18:44:45]     Response Body: {"jobID":"058b9231-2e0d-47d1-9bbe-88c4456e127c"}
-[2025-12-03 18:44:45] ============================================================
-[2025-12-03 18:44:46] Processing job 5/10: Lab_Results_RWilliams_1847.pdf for michael.chen@stlukeshealth.net
-[2025-12-03 18:44:46] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:46] 
-[2025-12-03 18:44:46] ============================================================
-[2025-12-03 18:44:46] JOB 5 - Sending request (generated PDF)
-[2025-12-03 18:44:46]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:46]   Method: POST
-[2025-12-03 18:44:46]   Headers:
-[2025-12-03 18:44:46]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:46]     Content-Type: multipart/form-data; boundary=5229613698f24152ad44c821ec835fe6
-[2025-12-03 18:44:46]   Form Fields:
-[2025-12-03 18:44:46]     file: (Lab_Results_RWilliams_1847.pdf, <5333 bytes>, application/pdf)
-[2025-12-03 18:44:46]     queue: Front Office
-[2025-12-03 18:44:46]     copies: 1
-[2025-12-03 18:44:46]     username: michael.chen@stlukeshealth.net
-[2025-12-03 18:44:47]   Response:
-[2025-12-03 18:44:47]     Status Code: 202
-[2025-12-03 18:44:47]     Response Headers:
-[2025-12-03 18:44:47]       Date: Wed, 03 Dec 2025 23:44:47 GMT
-[2025-12-03 18:44:47]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:47]       Content-Length: 48
-[2025-12-03 18:44:47]       Connection: keep-alive
-[2025-12-03 18:44:47]     Response Body: {"jobID":"2959e8a3-f6e4-491a-b725-11a2525c10f8"}
-[2025-12-03 18:44:47] ============================================================
-[2025-12-03 18:44:48] Processing job 6/10: Insurance_Claim_MCarter_2024.pdf for jennifer.williams@cedarpinemedical.org
-[2025-12-03 18:44:48] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:48] 
-[2025-12-03 18:44:48] ============================================================
-[2025-12-03 18:44:48] JOB 6 - Sending request (generated PDF)
-[2025-12-03 18:44:48]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:48]   Method: POST
-[2025-12-03 18:44:48]   Headers:
-[2025-12-03 18:44:48]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:48]     Content-Type: multipart/form-data; boundary=0193388153dc4dccb615965f951adf87
-[2025-12-03 18:44:48]   Form Fields:
-[2025-12-03 18:44:48]     file: (Insurance_Claim_MCarter_2024.pdf, <4156 bytes>, application/pdf)
-[2025-12-03 18:44:48]     queue: Front Office
-[2025-12-03 18:44:48]     copies: 1
-[2025-12-03 18:44:48]     username: jennifer.williams@cedarpinemedical.org
-[2025-12-03 18:44:49]   Response:
-[2025-12-03 18:44:49]     Status Code: 202
-[2025-12-03 18:44:49]     Response Headers:
-[2025-12-03 18:44:49]       Date: Wed, 03 Dec 2025 23:44:49 GMT
-[2025-12-03 18:44:49]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:49]       Content-Length: 48
-[2025-12-03 18:44:49]       Connection: keep-alive
-[2025-12-03 18:44:49]     Response Body: {"jobID":"785baf84-a154-4009-ad45-6fcfd3a1c5c3"}
-[2025-12-03 18:44:49] ============================================================
-[2025-12-03 18:44:50] Processing job 7/10: Patient_Intake_NThompson.pdf for christopher.lee@mountainmedgroup.net
-[2025-12-03 18:44:50] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:50] 
-[2025-12-03 18:44:50] ============================================================
-[2025-12-03 18:44:50] JOB 7 - Sending request (generated PDF)
-[2025-12-03 18:44:50]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:50]   Method: POST
-[2025-12-03 18:44:50]   Headers:
-[2025-12-03 18:44:50]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:50]     Content-Type: multipart/form-data; boundary=82e00679e58349488c04e1bdee549891
-[2025-12-03 18:44:50]   Form Fields:
-[2025-12-03 18:44:50]     file: (Patient_Intake_NThompson.pdf, <12933 bytes>, application/pdf)
-[2025-12-03 18:44:50]     queue: Front Office
-[2025-12-03 18:44:50]     copies: 1
-[2025-12-03 18:44:50]     username: christopher.lee@mountainmedgroup.net
-[2025-12-03 18:44:51]   Response:
-[2025-12-03 18:44:51]     Status Code: 202
-[2025-12-03 18:44:51]     Response Headers:
-[2025-12-03 18:44:51]       Date: Wed, 03 Dec 2025 23:44:51 GMT
-[2025-12-03 18:44:51]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:51]       Content-Length: 48
-[2025-12-03 18:44:51]       Connection: keep-alive
-[2025-12-03 18:44:51]     Response Body: {"jobID":"51454c1b-a633-46e4-8ad5-548393e03b9f"}
-[2025-12-03 18:44:51] ============================================================
-[2025-12-03 18:44:52] Processing job 8/10: Radiology_Report_BTaylor_XR4521.pdf for robert.taylor@valleyviewclinic.org
-[2025-12-03 18:44:52] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:52] 
-[2025-12-03 18:44:52] ============================================================
-[2025-12-03 18:44:52] JOB 8 - Sending request (generated PDF)
-[2025-12-03 18:44:52]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:52]   Method: POST
-[2025-12-03 18:44:52]   Headers:
-[2025-12-03 18:44:52]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:52]     Content-Type: multipart/form-data; boundary=c0186dd712624ac2bb2f83df00d2cef2
-[2025-12-03 18:44:52]   Form Fields:
-[2025-12-03 18:44:52]     file: (Radiology_Report_BTaylor_XR4521.pdf, <15863 bytes>, application/pdf)
-[2025-12-03 18:44:52]     queue: Front Office
-[2025-12-03 18:44:52]     copies: 1
-[2025-12-03 18:44:52]     username: robert.taylor@valleyviewclinic.org
-[2025-12-03 18:44:53]   Response:
-[2025-12-03 18:44:53]     Status Code: 202
-[2025-12-03 18:44:53]     Response Headers:
-[2025-12-03 18:44:53]       Date: Wed, 03 Dec 2025 23:44:53 GMT
-[2025-12-03 18:44:53]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:53]       Content-Length: 48
-[2025-12-03 18:44:53]       Connection: keep-alive
-[2025-12-03 18:44:53]     Response Body: {"jobID":"60e74557-ea1b-4e0c-bdfa-c78ac26dd0a7"}
-[2025-12-03 18:44:53] ============================================================
-[2025-12-03 18:44:54] Processing job 9/10: Surgical_Consent_DMartin.pdf for amanda.garcia@healthfirstcare.com
-[2025-12-03 18:44:54] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:54] 
-[2025-12-03 18:44:54] ============================================================
-[2025-12-03 18:44:54] JOB 9 - Sending request (generated PDF)
-[2025-12-03 18:44:54]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:54]   Method: POST
-[2025-12-03 18:44:54]   Headers:
-[2025-12-03 18:44:54]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:54]     Content-Type: multipart/form-data; boundary=25f635f695174543939ef2070f6899f4
-[2025-12-03 18:44:54]   Form Fields:
-[2025-12-03 18:44:54]     file: (Surgical_Consent_DMartin.pdf, <27325 bytes>, application/pdf)
-[2025-12-03 18:44:54]     queue: Front Office
-[2025-12-03 18:44:54]     copies: 1
-[2025-12-03 18:44:54]     username: amanda.garcia@healthfirstcare.com
-[2025-12-03 18:44:55]   Response:
-[2025-12-03 18:44:55]     Status Code: 202
-[2025-12-03 18:44:55]     Response Headers:
-[2025-12-03 18:44:55]       Date: Wed, 03 Dec 2025 23:44:55 GMT
-[2025-12-03 18:44:55]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:55]       Content-Length: 48
-[2025-12-03 18:44:55]       Connection: keep-alive
-[2025-12-03 18:44:55]     Response Body: {"jobID":"81bfa0cf-9199-443e-88c1-c963afc37927"}
-[2025-12-03 18:44:55] ============================================================
-[2025-12-03 18:44:56] Processing job 10/10: HIPAA_Authorization_SWhite.pdf for jessica.anderson@riverbendhealth.org
-[2025-12-03 18:44:56] PDF generated, calling send_single_job_from_buffer...
-[2025-12-03 18:44:56] 
-[2025-12-03 18:44:56] ============================================================
-[2025-12-03 18:44:56] JOB 10 - Sending request (generated PDF)
-[2025-12-03 18:44:56]   URL: https://external-api.app.printercloudnow.com/v1/print
-[2025-12-03 18:44:56]   Method: POST
-[2025-12-03 18:44:56]   Headers:
-[2025-12-03 18:44:56]     Authorization: eyJyYW5kb21TdHJpbmci...
-[2025-12-03 18:44:56]     Content-Type: multipart/form-data; boundary=f79f1a32ac1c4637b5000e5276f0c126
-[2025-12-03 18:44:56]   Form Fields:
-[2025-12-03 18:44:56]     file: (HIPAA_Authorization_SWhite.pdf, <20808 bytes>, application/pdf)
-[2025-12-03 18:44:56]     queue: Front Office
-[2025-12-03 18:44:56]     copies: 1
-[2025-12-03 18:44:56]     username: jessica.anderson@riverbendhealth.org
-[2025-12-03 18:44:57]   Response:
-[2025-12-03 18:44:57]     Status Code: 202
-[2025-12-03 18:44:57]     Response Headers:
-[2025-12-03 18:44:57]       Date: Wed, 03 Dec 2025 23:44:57 GMT
-[2025-12-03 18:44:57]       Content-Type: application/json; charset=utf-8
-[2025-12-03 18:44:57]       Content-Length: 48
-[2025-12-03 18:44:57]       Connection: keep-alive
-[2025-12-03 18:44:57]     Response Body: {"jobID":"6d6223fd-c25b-4abf-8ad6-0a34a390a35a"}
-[2025-12-03 18:44:57] ============================================================
+[2025-12-03 20:31:54] PrintJobSeeder starting up - logging initialized
+[2025-12-03 20:32:06] Fetching printers: https://external-api.app.printercloudnow.com/v1/printers?path=*Healthcare*&page=1
+[2025-12-03 20:32:06] Response status: 200
+[2025-12-03 20:32:06] Page 1: Found 2 printers, total so far: 2
+[2025-12-03 20:32:10] Fetching printers: https://external-api.app.printercloudnow.com/v1/printers?path=*/Manufacturing/*&page=1
+[2025-12-03 20:32:11] Response status: 200
+[2025-12-03 20:32:11] Page 1: Found 0 printers, total so far: 0
+[2025-12-03 20:33:13] Fetching printers: https://external-api.app.printercloudnow.com/v1/printers?path=*Healthcare*&page=1
+[2025-12-03 20:33:14] Response status: 200
+[2025-12-03 20:33:14] Page 1: Found 2 printers, total so far: 2
+[2025-12-03 20:33:18] Fetching printers: https://external-api.app.printercloudnow.com/v1/printers?path=*Manufacturing*&page=1
+[2025-12-03 20:33:19] Response status: 200
+[2025-12-03 20:33:19] Page 1: Found 2 printers, total so far: 2
+[2025-12-03 20:33:28] === /api/start-jobs called ===
+[2025-12-03 20:33:28] URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:33:28] Bearer token present: True
+[2025-12-03 20:33:28] === /api/stream-jobs/e0b41579-db08-4ad0-aaad-f353fb642582 called ===
+[2025-12-03 20:33:28] Generator started for session e0b41579-db08-4ad0-aaad-f353fb642582
+[2025-12-03 20:33:28] Session found. Jobs: 20
+[2025-12-03 20:33:28] Processing job 1/20: Immunization_Record_JDavis_Peds.pdf for matthew.wilson@communitycaremed.com
+[2025-12-03 20:33:28] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:33:28] 
+[2025-12-03 20:33:28] ============================================================
+[2025-12-03 20:33:28] JOB 1 - Sending request (generated PDF)
+[2025-12-03 20:33:28]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:33:28]   Method: POST
+[2025-12-03 20:33:28]   Headers:
+[2025-12-03 20:33:28]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:33:28]     Content-Type: multipart/form-data; boundary=b1c88931391d482498766d3242889422
+[2025-12-03 20:33:28]   Form Fields:
+[2025-12-03 20:33:28]     file: (Immunization_Record_JDavis_Peds.pdf, <27198 bytes>, application/pdf)
+[2025-12-03 20:33:28]     queue: Front Office
+[2025-12-03 20:33:28]     copies: 1
+[2025-12-03 20:33:28]     username: matthew.wilson@communitycaremed.com
+[2025-12-03 20:33:29]   Response:
+[2025-12-03 20:33:29]     Status Code: 202
+[2025-12-03 20:33:29]     Response Headers:
+[2025-12-03 20:33:29]       Date: Thu, 04 Dec 2025 01:33:29 GMT
+[2025-12-03 20:33:29]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:33:29]       Content-Length: 48
+[2025-12-03 20:33:29]       Connection: keep-alive
+[2025-12-03 20:33:29]     Response Body: {"jobID":"1e2f461f-8b33-4b56-8220-a87415da5425"}
+[2025-12-03 20:33:29] ============================================================
+[2025-12-03 20:34:03] Processing job 2/20: Radiology_Report_BTaylor_XR4521.pdf for robert.taylor@valleyviewclinic.org
+[2025-12-03 20:34:03] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:03] 
+[2025-12-03 20:34:03] ============================================================
+[2025-12-03 20:34:03] JOB 2 - Sending request (generated PDF)
+[2025-12-03 20:34:03]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:03]   Method: POST
+[2025-12-03 20:34:03]   Headers:
+[2025-12-03 20:34:03]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:03]     Content-Type: multipart/form-data; boundary=7d0c0e4d53e141bd87cefb41ce0b9dd7
+[2025-12-03 20:34:03]   Form Fields:
+[2025-12-03 20:34:03]     file: (Radiology_Report_BTaylor_XR4521.pdf, <15450 bytes>, application/pdf)
+[2025-12-03 20:34:03]     queue: Front Office
+[2025-12-03 20:34:03]     copies: 1
+[2025-12-03 20:34:03]     username: robert.taylor@valleyviewclinic.org
+[2025-12-03 20:34:04]   Response:
+[2025-12-03 20:34:04]     Status Code: 202
+[2025-12-03 20:34:04]     Response Headers:
+[2025-12-03 20:34:04]       Date: Thu, 04 Dec 2025 01:34:04 GMT
+[2025-12-03 20:34:04]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:04]       Content-Length: 48
+[2025-12-03 20:34:04]       Connection: keep-alive
+[2025-12-03 20:34:04]     Response Body: {"jobID":"a0326492-7ef7-4aeb-97ae-5fefd4b69da5"}
+[2025-12-03 20:34:04] ============================================================
+[2025-12-03 20:34:06] Processing job 3/20: Safety_Checklist_SC_LineA.pdf for susan.thomas@advancedalloys.net
+[2025-12-03 20:34:06] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:06] 
+[2025-12-03 20:34:06] ============================================================
+[2025-12-03 20:34:06] JOB 3 - Sending request (generated PDF)
+[2025-12-03 20:34:06]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:06]   Method: POST
+[2025-12-03 20:34:06]   Headers:
+[2025-12-03 20:34:06]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:06]     Content-Type: multipart/form-data; boundary=7310947631fe418caafce3b5d41fb146
+[2025-12-03 20:34:06]   Form Fields:
+[2025-12-03 20:34:06]     file: (Safety_Checklist_SC_LineA.pdf, <3628 bytes>, application/pdf)
+[2025-12-03 20:34:06]     queue: Reception Printer
+[2025-12-03 20:34:06]     copies: 1
+[2025-12-03 20:34:06]     username: susan.thomas@advancedalloys.net
+[2025-12-03 20:34:07]   Response:
+[2025-12-03 20:34:07]     Status Code: 202
+[2025-12-03 20:34:07]     Response Headers:
+[2025-12-03 20:34:07]       Date: Thu, 04 Dec 2025 01:34:07 GMT
+[2025-12-03 20:34:07]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:07]       Content-Length: 48
+[2025-12-03 20:34:07]       Connection: keep-alive
+[2025-12-03 20:34:07]     Response Body: {"jobID":"73c131df-cd95-4741-a358-cc7ed986bce5"}
+[2025-12-03 20:34:07] ============================================================
+[2025-12-03 20:34:09] Processing job 4/20: Patient_Discharge_Summary_JSmith.pdf for sarah.johnson@mercyvalleymed.org
+[2025-12-03 20:34:09] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:09] 
+[2025-12-03 20:34:09] ============================================================
+[2025-12-03 20:34:09] JOB 4 - Sending request (generated PDF)
+[2025-12-03 20:34:09]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:09]   Method: POST
+[2025-12-03 20:34:09]   Headers:
+[2025-12-03 20:34:09]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:09]     Content-Type: multipart/form-data; boundary=db05045bc66e4aa5abe838189917d71e
+[2025-12-03 20:34:09]   Form Fields:
+[2025-12-03 20:34:09]     file: (Patient_Discharge_Summary_JSmith.pdf, <9066 bytes>, application/pdf)
+[2025-12-03 20:34:09]     queue: Front Office
+[2025-12-03 20:34:09]     copies: 1
+[2025-12-03 20:34:09]     username: sarah.johnson@mercyvalleymed.org
+[2025-12-03 20:34:10]   Response:
+[2025-12-03 20:34:10]     Status Code: 202
+[2025-12-03 20:34:10]     Response Headers:
+[2025-12-03 20:34:10]       Date: Thu, 04 Dec 2025 01:34:10 GMT
+[2025-12-03 20:34:10]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:10]       Content-Length: 48
+[2025-12-03 20:34:10]       Connection: keep-alive
+[2025-12-03 20:34:10]     Response Body: {"jobID":"4e34a1e0-cfc5-4e21-b898-e7c2fbaedb33"}
+[2025-12-03 20:34:10] ============================================================
+[2025-12-03 20:34:12] Processing job 5/20: Work_Order_WO78542.pdf for james.miller@apexmanufacturing.com
+[2025-12-03 20:34:12] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:12] 
+[2025-12-03 20:34:12] ============================================================
+[2025-12-03 20:34:12] JOB 5 - Sending request (generated PDF)
+[2025-12-03 20:34:12]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:12]   Method: POST
+[2025-12-03 20:34:12]   Headers:
+[2025-12-03 20:34:12]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:12]     Content-Type: multipart/form-data; boundary=12b6af20f7e845198290186b2ad4f428
+[2025-12-03 20:34:12]   Form Fields:
+[2025-12-03 20:34:12]     file: (Work_Order_WO78542.pdf, <2439 bytes>, application/pdf)
+[2025-12-03 20:34:12]     queue: Reception Printer
+[2025-12-03 20:34:12]     copies: 1
+[2025-12-03 20:34:12]     username: james.miller@apexmanufacturing.com
+[2025-12-03 20:34:13]   Response:
+[2025-12-03 20:34:13]     Status Code: 202
+[2025-12-03 20:34:13]     Response Headers:
+[2025-12-03 20:34:13]       Date: Thu, 04 Dec 2025 01:34:13 GMT
+[2025-12-03 20:34:13]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:13]       Content-Length: 48
+[2025-12-03 20:34:13]       Connection: keep-alive
+[2025-12-03 20:34:13]     Response Body: {"jobID":"661df5a3-567a-43dd-8e0d-3d443e2a0a1e"}
+[2025-12-03 20:34:13] ============================================================
+[2025-12-03 20:34:16] Processing job 6/20: Purchase_Order_PO2024_1847.pdf for margaret.moore@elitemanufacturing.net
+[2025-12-03 20:34:16] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:16] 
+[2025-12-03 20:34:16] ============================================================
+[2025-12-03 20:34:16] JOB 6 - Sending request (generated PDF)
+[2025-12-03 20:34:16]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:16]   Method: POST
+[2025-12-03 20:34:16]   Headers:
+[2025-12-03 20:34:16]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:16]     Content-Type: multipart/form-data; boundary=b0f645c5bef849ed9ba06e17c937310a
+[2025-12-03 20:34:16]   Form Fields:
+[2025-12-03 20:34:16]     file: (Purchase_Order_PO2024_1847.pdf, <3539 bytes>, application/pdf)
+[2025-12-03 20:34:16]     queue: Reception Printer
+[2025-12-03 20:34:16]     copies: 1
+[2025-12-03 20:34:16]     username: margaret.moore@elitemanufacturing.net
+[2025-12-03 20:34:17]   Response:
+[2025-12-03 20:34:17]     Status Code: 202
+[2025-12-03 20:34:17]     Response Headers:
+[2025-12-03 20:34:17]       Date: Thu, 04 Dec 2025 01:34:17 GMT
+[2025-12-03 20:34:17]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:17]       Content-Length: 48
+[2025-12-03 20:34:17]       Connection: keep-alive
+[2025-12-03 20:34:17]     Response Body: {"jobID":"eb5f7ed7-fb3e-4f08-ab93-87da6cce0c6f"}
+[2025-12-03 20:34:17] ============================================================
+[2025-12-03 20:34:39] Processing job 7/20: Production_Schedule_PS_Week48.pdf for richard.martinez@steelcraftmfg.com
+[2025-12-03 20:34:39] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:39] 
+[2025-12-03 20:34:39] ============================================================
+[2025-12-03 20:34:39] JOB 7 - Sending request (generated PDF)
+[2025-12-03 20:34:39]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:39]   Method: POST
+[2025-12-03 20:34:39]   Headers:
+[2025-12-03 20:34:39]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:39]     Content-Type: multipart/form-data; boundary=4a23dc1238df418daa005faf2e56f99a
+[2025-12-03 20:34:39]   Form Fields:
+[2025-12-03 20:34:39]     file: (Production_Schedule_PS_Week48.pdf, <6241 bytes>, application/pdf)
+[2025-12-03 20:34:39]     queue: Reception Printer
+[2025-12-03 20:34:39]     copies: 1
+[2025-12-03 20:34:39]     username: richard.martinez@steelcraftmfg.com
+[2025-12-03 20:34:40]   Response:
+[2025-12-03 20:34:40]     Status Code: 202
+[2025-12-03 20:34:40]     Response Headers:
+[2025-12-03 20:34:40]       Date: Thu, 04 Dec 2025 01:34:40 GMT
+[2025-12-03 20:34:40]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:40]       Content-Length: 48
+[2025-12-03 20:34:40]       Connection: keep-alive
+[2025-12-03 20:34:40]     Response Body: {"jobID":"f9416794-cedb-4037-8824-1fede5765a9f"}
+[2025-12-03 20:34:40] ============================================================
+[2025-12-03 20:34:44] Processing job 8/20: Lab_Results_RWilliams_1847.pdf for michael.chen@stlukeshealth.net
+[2025-12-03 20:34:44] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:44] 
+[2025-12-03 20:34:44] ============================================================
+[2025-12-03 20:34:44] JOB 8 - Sending request (generated PDF)
+[2025-12-03 20:34:44]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:44]   Method: POST
+[2025-12-03 20:34:44]   Headers:
+[2025-12-03 20:34:44]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:44]     Content-Type: multipart/form-data; boundary=adc60cebac614499a3c0b180a6122c89
+[2025-12-03 20:34:44]   Form Fields:
+[2025-12-03 20:34:44]     file: (Lab_Results_RWilliams_1847.pdf, <4561 bytes>, application/pdf)
+[2025-12-03 20:34:44]     queue: Front Office
+[2025-12-03 20:34:44]     copies: 1
+[2025-12-03 20:34:44]     username: michael.chen@stlukeshealth.net
+[2025-12-03 20:34:45]   Response:
+[2025-12-03 20:34:45]     Status Code: 202
+[2025-12-03 20:34:45]     Response Headers:
+[2025-12-03 20:34:45]       Date: Thu, 04 Dec 2025 01:34:45 GMT
+[2025-12-03 20:34:45]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:45]       Content-Length: 48
+[2025-12-03 20:34:45]       Connection: keep-alive
+[2025-12-03 20:34:45]     Response Body: {"jobID":"1441e017-a1ba-419a-84fc-c847ace791bf"}
+[2025-12-03 20:34:45] ============================================================
+[2025-12-03 20:34:47] Processing job 9/20: Bill_of_Materials_BOM_A4521.pdf for patricia.rodriguez@qualityforgeind.net
+[2025-12-03 20:34:47] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:47] 
+[2025-12-03 20:34:47] ============================================================
+[2025-12-03 20:34:47] JOB 9 - Sending request (generated PDF)
+[2025-12-03 20:34:47]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:47]   Method: POST
+[2025-12-03 20:34:47]   Headers:
+[2025-12-03 20:34:47]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:47]     Content-Type: multipart/form-data; boundary=e7f5a9d9b6384a61b374ec17902fad5f
+[2025-12-03 20:34:47]   Form Fields:
+[2025-12-03 20:34:47]     file: (Bill_of_Materials_BOM_A4521.pdf, <7366 bytes>, application/pdf)
+[2025-12-03 20:34:47]     queue: Reception Printer
+[2025-12-03 20:34:47]     copies: 1
+[2025-12-03 20:34:47]     username: patricia.rodriguez@qualityforgeind.net
+[2025-12-03 20:34:48]   Response:
+[2025-12-03 20:34:48]     Status Code: 202
+[2025-12-03 20:34:48]     Response Headers:
+[2025-12-03 20:34:48]       Date: Thu, 04 Dec 2025 01:34:48 GMT
+[2025-12-03 20:34:48]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:48]       Content-Length: 48
+[2025-12-03 20:34:48]       Connection: keep-alive
+[2025-12-03 20:34:48]     Response Body: {"jobID":"0ff954db-69b4-4aa5-8da9-8a0e09152822"}
+[2025-12-03 20:34:48] ============================================================
+[2025-12-03 20:34:50] Processing job 10/20: Patient_Intake_NThompson.pdf for christopher.lee@mountainmedgroup.net
+[2025-12-03 20:34:50] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:34:50] 
+[2025-12-03 20:34:50] ============================================================
+[2025-12-03 20:34:50] JOB 10 - Sending request (generated PDF)
+[2025-12-03 20:34:50]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:34:50]   Method: POST
+[2025-12-03 20:34:50]   Headers:
+[2025-12-03 20:34:50]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:34:50]     Content-Type: multipart/form-data; boundary=4ed55a4ec23941c994b38638093b226b
+[2025-12-03 20:34:50]   Form Fields:
+[2025-12-03 20:34:50]     file: (Patient_Intake_NThompson.pdf, <8878 bytes>, application/pdf)
+[2025-12-03 20:34:50]     queue: Front Office
+[2025-12-03 20:34:50]     copies: 1
+[2025-12-03 20:34:50]     username: christopher.lee@mountainmedgroup.net
+[2025-12-03 20:34:51]   Response:
+[2025-12-03 20:34:51]     Status Code: 202
+[2025-12-03 20:34:51]     Response Headers:
+[2025-12-03 20:34:51]       Date: Thu, 04 Dec 2025 01:34:51 GMT
+[2025-12-03 20:34:51]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:34:51]       Content-Length: 48
+[2025-12-03 20:34:51]       Connection: keep-alive
+[2025-12-03 20:34:51]     Response Body: {"jobID":"3473f9cf-d5b6-465c-add4-c9b558391076"}
+[2025-12-03 20:34:51] ============================================================
+[2025-12-03 20:35:24] Processing job 11/20: HIPAA_Authorization_SWhite.pdf for jessica.anderson@riverbendhealth.org
+[2025-12-03 20:35:24] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:35:24] 
+[2025-12-03 20:35:24] ============================================================
+[2025-12-03 20:35:24] JOB 11 - Sending request (generated PDF)
+[2025-12-03 20:35:24]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:35:24]   Method: POST
+[2025-12-03 20:35:24]   Headers:
+[2025-12-03 20:35:24]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:35:24]     Content-Type: multipart/form-data; boundary=9613cdfefef742b1a3fb65ca894b7d3c
+[2025-12-03 20:35:24]   Form Fields:
+[2025-12-03 20:35:24]     file: (HIPAA_Authorization_SWhite.pdf, <8297 bytes>, application/pdf)
+[2025-12-03 20:35:24]     queue: Front Office
+[2025-12-03 20:35:24]     copies: 1
+[2025-12-03 20:35:24]     username: jessica.anderson@riverbendhealth.org
+[2025-12-03 20:35:25]   Response:
+[2025-12-03 20:35:25]     Status Code: 202
+[2025-12-03 20:35:25]     Response Headers:
+[2025-12-03 20:35:25]       Date: Thu, 04 Dec 2025 01:35:25 GMT
+[2025-12-03 20:35:25]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:35:25]       Content-Length: 48
+[2025-12-03 20:35:25]       Connection: keep-alive
+[2025-12-03 20:35:25]     Response Body: {"jobID":"1b222533-f13f-46f4-9e36-afecb91606b0"}
+[2025-12-03 20:35:25] ============================================================
+[2025-12-03 20:35:25] Processing job 12/20: Equipment_Maintenance_EM_CNC05.pdf for joseph.taylor@industrialpro.com
+[2025-12-03 20:35:25] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:35:25] 
+[2025-12-03 20:35:25] ============================================================
+[2025-12-03 20:35:25] JOB 12 - Sending request (generated PDF)
+[2025-12-03 20:35:25]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:35:25]   Method: POST
+[2025-12-03 20:35:25]   Headers:
+[2025-12-03 20:35:25]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:35:25]     Content-Type: multipart/form-data; boundary=df40da68316e45ecb91248bc731d4f7d
+[2025-12-03 20:35:25]   Form Fields:
+[2025-12-03 20:35:25]     file: (Equipment_Maintenance_EM_CNC05.pdf, <21830 bytes>, application/pdf)
+[2025-12-03 20:35:25]     queue: Reception Printer
+[2025-12-03 20:35:25]     copies: 1
+[2025-12-03 20:35:25]     username: joseph.taylor@industrialpro.com
+[2025-12-03 20:35:26]   Response:
+[2025-12-03 20:35:26]     Status Code: 202
+[2025-12-03 20:35:26]     Response Headers:
+[2025-12-03 20:35:26]       Date: Thu, 04 Dec 2025 01:35:26 GMT
+[2025-12-03 20:35:26]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:35:26]       Content-Length: 48
+[2025-12-03 20:35:26]       Connection: keep-alive
+[2025-12-03 20:35:26]     Response Body: {"jobID":"f4f36763-7502-48e7-aa14-dd1bfc5c45e8"}
+[2025-12-03 20:35:26] ============================================================
+[2025-12-03 20:35:40] Processing job 13/20: Inventory_Report_INV_Dec2024.pdf for barbara.anderson@reliablemachine.net
+[2025-12-03 20:35:40] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:35:40] 
+[2025-12-03 20:35:40] ============================================================
+[2025-12-03 20:35:40] JOB 13 - Sending request (generated PDF)
+[2025-12-03 20:35:40]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:35:40]   Method: POST
+[2025-12-03 20:35:40]   Headers:
+[2025-12-03 20:35:40]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:35:40]     Content-Type: multipart/form-data; boundary=2e8b87ff1f364e518de7f8e782807056
+[2025-12-03 20:35:40]   Form Fields:
+[2025-12-03 20:35:40]     file: (Inventory_Report_INV_Dec2024.pdf, <6114 bytes>, application/pdf)
+[2025-12-03 20:35:40]     queue: Reception Printer
+[2025-12-03 20:35:40]     copies: 1
+[2025-12-03 20:35:40]     username: barbara.anderson@reliablemachine.net
+[2025-12-03 20:35:41]   Response:
+[2025-12-03 20:35:41]     Status Code: 202
+[2025-12-03 20:35:41]     Response Headers:
+[2025-12-03 20:35:41]       Date: Thu, 04 Dec 2025 01:35:41 GMT
+[2025-12-03 20:35:41]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:35:41]       Content-Length: 48
+[2025-12-03 20:35:41]       Connection: keep-alive
+[2025-12-03 20:35:41]     Response Body: {"jobID":"e2ef10fb-b33d-4bc7-ad7a-921db161a4c1"}
+[2025-12-03 20:35:41] ============================================================
+[2025-12-03 20:35:44] Processing job 14/20: Shipping_Manifest_SM45721.pdf for william.garcia@summitindustries.com
+[2025-12-03 20:35:44] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:35:44] 
+[2025-12-03 20:35:44] ============================================================
+[2025-12-03 20:35:44] JOB 14 - Sending request (generated PDF)
+[2025-12-03 20:35:44]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:35:44]   Method: POST
+[2025-12-03 20:35:44]   Headers:
+[2025-12-03 20:35:44]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:35:44]     Content-Type: multipart/form-data; boundary=abf8cfd454a1440dae08f2d5e126110b
+[2025-12-03 20:35:44]   Form Fields:
+[2025-12-03 20:35:44]     file: (Shipping_Manifest_SM45721.pdf, <10686 bytes>, application/pdf)
+[2025-12-03 20:35:44]     queue: Reception Printer
+[2025-12-03 20:35:44]     copies: 1
+[2025-12-03 20:35:44]     username: william.garcia@summitindustries.com
+[2025-12-03 20:35:45]   Response:
+[2025-12-03 20:35:45]     Status Code: 202
+[2025-12-03 20:35:45]     Response Headers:
+[2025-12-03 20:35:45]       Date: Thu, 04 Dec 2025 01:35:45 GMT
+[2025-12-03 20:35:45]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:35:45]       Content-Length: 48
+[2025-12-03 20:35:45]       Connection: keep-alive
+[2025-12-03 20:35:45]     Response Body: {"jobID":"e711e061-4d94-47be-bbae-90aa60e272dc"}
+[2025-12-03 20:35:45] ============================================================
+[2025-12-03 20:35:46] Processing job 15/20: Packing_Slip_PKS89452.pdf for charles.hernandez@primeproduction.com
+[2025-12-03 20:35:46] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:35:46] 
+[2025-12-03 20:35:46] ============================================================
+[2025-12-03 20:35:46] JOB 15 - Sending request (generated PDF)
+[2025-12-03 20:35:46]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:35:46]   Method: POST
+[2025-12-03 20:35:46]   Headers:
+[2025-12-03 20:35:46]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:35:46]     Content-Type: multipart/form-data; boundary=40adfc639bfa477f9281e4261a9e5d51
+[2025-12-03 20:35:46]   Form Fields:
+[2025-12-03 20:35:46]     file: (Packing_Slip_PKS89452.pdf, <24433 bytes>, application/pdf)
+[2025-12-03 20:35:46]     queue: Reception Printer
+[2025-12-03 20:35:46]     copies: 1
+[2025-12-03 20:35:46]     username: charles.hernandez@primeproduction.com
+[2025-12-03 20:35:47]   Response:
+[2025-12-03 20:35:47]     Status Code: 202
+[2025-12-03 20:35:47]     Response Headers:
+[2025-12-03 20:35:47]       Date: Thu, 04 Dec 2025 01:35:47 GMT
+[2025-12-03 20:35:47]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:35:47]       Content-Length: 48
+[2025-12-03 20:35:47]       Connection: keep-alive
+[2025-12-03 20:35:47]     Response Body: {"jobID":"02709acc-3c0f-4994-ac95-108e238b78cd"}
+[2025-12-03 20:35:47] ============================================================
+[2025-12-03 20:36:35] Processing job 16/20: Quality_Inspection_QI2024_0892.pdf for linda.davis@precisionmetalworks.net
+[2025-12-03 20:36:35] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:36:35] 
+[2025-12-03 20:36:35] ============================================================
+[2025-12-03 20:36:35] JOB 16 - Sending request (generated PDF)
+[2025-12-03 20:36:35]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:36:35]   Method: POST
+[2025-12-03 20:36:35]   Headers:
+[2025-12-03 20:36:35]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:36:35]     Content-Type: multipart/form-data; boundary=a877ed505ed648a387f2cbbc885f2734
+[2025-12-03 20:36:35]   Form Fields:
+[2025-12-03 20:36:35]     file: (Quality_Inspection_QI2024_0892.pdf, <6346 bytes>, application/pdf)
+[2025-12-03 20:36:35]     queue: Reception Printer
+[2025-12-03 20:36:35]     copies: 1
+[2025-12-03 20:36:35]     username: linda.davis@precisionmetalworks.net
+[2025-12-03 20:36:36]   Response:
+[2025-12-03 20:36:36]     Status Code: 202
+[2025-12-03 20:36:36]     Response Headers:
+[2025-12-03 20:36:36]       Date: Thu, 04 Dec 2025 01:36:36 GMT
+[2025-12-03 20:36:36]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:36:36]       Content-Length: 48
+[2025-12-03 20:36:36]       Connection: keep-alive
+[2025-12-03 20:36:36]     Response Body: {"jobID":"70d3d10f-9bf7-474d-9140-494213b8ca08"}
+[2025-12-03 20:36:36] ============================================================
+[2025-12-03 20:36:37] Processing job 17/20: Insurance_Claim_MCarter_2024.pdf for jennifer.williams@cedarpinemedical.org
+[2025-12-03 20:36:37] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:36:37] 
+[2025-12-03 20:36:37] ============================================================
+[2025-12-03 20:36:37] JOB 17 - Sending request (generated PDF)
+[2025-12-03 20:36:37]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:36:37]   Method: POST
+[2025-12-03 20:36:37]   Headers:
+[2025-12-03 20:36:37]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:36:37]     Content-Type: multipart/form-data; boundary=1b21281fa5b745a496777acf4980a6d0
+[2025-12-03 20:36:37]   Form Fields:
+[2025-12-03 20:36:37]     file: (Insurance_Claim_MCarter_2024.pdf, <17133 bytes>, application/pdf)
+[2025-12-03 20:36:37]     queue: Front Office
+[2025-12-03 20:36:37]     copies: 1
+[2025-12-03 20:36:37]     username: jennifer.williams@cedarpinemedical.org
+[2025-12-03 20:36:38]   Response:
+[2025-12-03 20:36:38]     Status Code: 202
+[2025-12-03 20:36:38]     Response Headers:
+[2025-12-03 20:36:38]       Date: Thu, 04 Dec 2025 01:36:38 GMT
+[2025-12-03 20:36:38]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:36:38]       Content-Length: 48
+[2025-12-03 20:36:38]       Connection: keep-alive
+[2025-12-03 20:36:38]     Response Body: {"jobID":"bab166d4-b33c-4b7b-af2b-a0442ad31c5d"}
+[2025-12-03 20:36:38] ============================================================
+[2025-12-03 20:36:40] Processing job 18/20: Medical_History_LAnderson.pdf for emily.brown@sunrisehospital.net
+[2025-12-03 20:36:40] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:36:40] 
+[2025-12-03 20:36:40] ============================================================
+[2025-12-03 20:36:40] JOB 18 - Sending request (generated PDF)
+[2025-12-03 20:36:40]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:36:40]   Method: POST
+[2025-12-03 20:36:40]   Headers:
+[2025-12-03 20:36:40]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:36:40]     Content-Type: multipart/form-data; boundary=035c13ff902b4aca97b5e441d92c2811
+[2025-12-03 20:36:40]   Form Fields:
+[2025-12-03 20:36:40]     file: (Medical_History_LAnderson.pdf, <2923 bytes>, application/pdf)
+[2025-12-03 20:36:40]     queue: Front Office
+[2025-12-03 20:36:40]     copies: 1
+[2025-12-03 20:36:40]     username: emily.brown@sunrisehospital.net
+[2025-12-03 20:36:41]   Response:
+[2025-12-03 20:36:41]     Status Code: 202
+[2025-12-03 20:36:41]     Response Headers:
+[2025-12-03 20:36:41]       Date: Thu, 04 Dec 2025 01:36:41 GMT
+[2025-12-03 20:36:41]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:36:41]       Content-Length: 48
+[2025-12-03 20:36:41]       Connection: keep-alive
+[2025-12-03 20:36:41]     Response Body: {"jobID":"c0d3c077-0404-40df-b697-96174c0a9859"}
+[2025-12-03 20:36:41] ============================================================
+[2025-12-03 20:36:42] Processing job 19/20: Surgical_Consent_DMartin.pdf for amanda.garcia@healthfirstcare.com
+[2025-12-03 20:36:42] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:36:42] 
+[2025-12-03 20:36:42] ============================================================
+[2025-12-03 20:36:42] JOB 19 - Sending request (generated PDF)
+[2025-12-03 20:36:42]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:36:42]   Method: POST
+[2025-12-03 20:36:42]   Headers:
+[2025-12-03 20:36:42]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:36:42]     Content-Type: multipart/form-data; boundary=2f9c003b360a465da3183730ad82cafe
+[2025-12-03 20:36:42]   Form Fields:
+[2025-12-03 20:36:42]     file: (Surgical_Consent_DMartin.pdf, <3641 bytes>, application/pdf)
+[2025-12-03 20:36:42]     queue: Front Office
+[2025-12-03 20:36:42]     copies: 1
+[2025-12-03 20:36:42]     username: amanda.garcia@healthfirstcare.com
+[2025-12-03 20:36:43]   Response:
+[2025-12-03 20:36:43]     Status Code: 202
+[2025-12-03 20:36:43]     Response Headers:
+[2025-12-03 20:36:43]       Date: Thu, 04 Dec 2025 01:36:43 GMT
+[2025-12-03 20:36:43]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:36:43]       Content-Length: 48
+[2025-12-03 20:36:43]       Connection: keep-alive
+[2025-12-03 20:36:43]     Response Body: {"jobID":"89581498-8f94-4b4b-94f9-8a28a326d5c1"}
+[2025-12-03 20:36:43] ============================================================
+[2025-12-03 20:37:31] Processing job 20/20: Prescription_Order_KJohnson.pdf for david.martinez@regionalhealthpartners.com
+[2025-12-03 20:37:31] PDF generated, calling send_single_job_from_buffer...
+[2025-12-03 20:37:31] 
+[2025-12-03 20:37:31] ============================================================
+[2025-12-03 20:37:31] JOB 20 - Sending request (generated PDF)
+[2025-12-03 20:37:31]   URL: https://external-api.app.printercloudnow.com/v1/print
+[2025-12-03 20:37:31]   Method: POST
+[2025-12-03 20:37:31]   Headers:
+[2025-12-03 20:37:31]     Authorization: eyJyYW5kb21TdHJpbmci...
+[2025-12-03 20:37:31]     Content-Type: multipart/form-data; boundary=479870f077a54dbb88499e70cfe11050
+[2025-12-03 20:37:31]   Form Fields:
+[2025-12-03 20:37:31]     file: (Prescription_Order_KJohnson.pdf, <3730 bytes>, application/pdf)
+[2025-12-03 20:37:31]     queue: Front Office
+[2025-12-03 20:37:31]     copies: 1
+[2025-12-03 20:37:31]     username: david.martinez@regionalhealthpartners.com
+[2025-12-03 20:37:32]   Response:
+[2025-12-03 20:37:32]     Status Code: 202
+[2025-12-03 20:37:32]     Response Headers:
+[2025-12-03 20:37:32]       Date: Thu, 04 Dec 2025 01:37:32 GMT
+[2025-12-03 20:37:32]       Content-Type: application/json; charset=utf-8
+[2025-12-03 20:37:32]       Content-Length: 48
+[2025-12-03 20:37:32]       Connection: keep-alive
+[2025-12-03 20:37:32]     Response Body: {"jobID":"137c1cb2-7ded-44c3-a955-973ae59ae9f6"}
+[2025-12-03 20:37:32] ============================================================

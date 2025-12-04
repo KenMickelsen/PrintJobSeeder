@@ -95,6 +95,13 @@ def get_default_settings():
             'protocol': 'https',
             'port': '443',
             'bearer_token': ''
+        },
+        'industry_paths': {
+            'healthcare': '*Healthcare*',
+            'manufacturing': '*Manufacturing*',
+            'legal': '*Legal*',
+            'finance': '*Finance*',
+            'education': '*Education*'
         }
     }
 
@@ -164,6 +171,77 @@ def build_onprem_url(settings):
     url += "/v1/print"
     
     return url
+
+
+def get_cloud_base_url(region):
+    """Get the base URL for a cloud region (without endpoint path)"""
+    if region not in CLOUD_REGIONS:
+        return None
+    domain = CLOUD_REGIONS[region]['domain']
+    return f"https://external-api.app.{domain}"
+
+
+def fetch_printers_from_api(api_key, base_url, path_filter):
+    """Fetch all printers from the Vasion API matching the path filter"""
+    all_printers = []
+    page = 1
+    limit = 100  # Fetch more per page to reduce API calls
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    while True:
+        params = {
+            'path': path_filter,
+            'fields': 'id,title',
+            'limit': limit,
+            'page': page
+        }
+        
+        try:
+            log(f"Fetching printers: {base_url}/v1/printers?path={path_filter}&page={page}")
+            response = requests.get(
+                f"{base_url}/v1/printers",
+                headers=headers,
+                params=params,
+                timeout=30
+            )
+            
+            log(f"Response status: {response.status_code}")
+            
+            if response.status_code != 200:
+                log(f"Error response: {response.text}")
+                return None, f"API returned status {response.status_code}: {response.text[:200]}"
+            
+            data = response.json()
+            printers = data.get('printers', [])
+            pagination = data.get('pagination', {})
+            
+            # Extract printer titles
+            for printer in printers:
+                title = printer.get('title', '')
+                if title:
+                    all_printers.append(title)
+            
+            log(f"Page {page}: Found {len(printers)} printers, total so far: {len(all_printers)}")
+            
+            # Check if there are more pages
+            total_pages = pagination.get('totalPages', 1)
+            if page >= total_pages:
+                break
+            
+            page += 1
+            
+        except requests.exceptions.Timeout:
+            return None, "Request timed out"
+        except Exception as e:
+            log(f"Error fetching printers: {e}")
+            return None, str(e)
+    
+    return all_printers, None
+
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size (multiple industry uploads)
@@ -858,6 +936,7 @@ def index():
 def get_settings():
     """Get current settings (with keys masked)"""
     settings = load_settings()
+    defaults = get_default_settings()
     # Return masked version
     return jsonify({
         'cloud_link': {
@@ -870,6 +949,7 @@ def get_settings():
             'port': settings['on_premise'].get('port', '443'),
             'bearer_token_set': bool(settings['on_premise'].get('bearer_token', ''))
         },
+        'industry_paths': settings.get('industry_paths', defaults['industry_paths']),
         'cloud_regions': CLOUD_REGIONS
     })
 
@@ -901,6 +981,13 @@ def update_settings():
                 current_settings['on_premise']['port'] = op['port']
             if 'bearer_token' in op and op['bearer_token'] is not None:
                 current_settings['on_premise']['bearer_token'] = obfuscate_key(op['bearer_token'])
+        
+        # Update industry paths
+        if 'industry_paths' in data:
+            if 'industry_paths' not in current_settings:
+                current_settings['industry_paths'] = {}
+            for industry, path in data['industry_paths'].items():
+                current_settings['industry_paths'][industry] = path
         
         if save_settings(current_settings):
             return jsonify({'success': True, 'message': 'Settings saved'})
@@ -976,6 +1063,61 @@ def get_auth_for_destination():
             return jsonify({'success': False, 'error': 'Invalid destination type'}), 400
             
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/printers/<industry>', methods=['GET'])
+def get_printers_for_industry(industry):
+    """Fetch printers from Vasion API for a specific industry folder"""
+    try:
+        settings = load_settings()
+        
+        # Check if cloud link is configured
+        region = settings['cloud_link'].get('region', '')
+        api_key = deobfuscate_key(settings['cloud_link'].get('api_key', ''))
+        
+        if not region or not api_key:
+            return jsonify({
+                'success': False,
+                'error': 'API Cloud Link must be configured to fetch printers. Please configure it in Settings.'
+            }), 400
+        
+        # Get the path filter for this industry
+        industry_paths = settings.get('industry_paths', get_default_settings()['industry_paths'])
+        path_filter = industry_paths.get(industry, f'*{industry.capitalize()}*')
+        
+        if not path_filter:
+            return jsonify({
+                'success': False,
+                'error': f'No folder path configured for {industry}'
+            }), 400
+        
+        # Get the base URL for the cloud region
+        base_url = get_cloud_base_url(region)
+        if not base_url:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid cloud region: {region}'
+            }), 400
+        
+        # Fetch printers
+        printers, error = fetch_printers_from_api(api_key, base_url, path_filter)
+        
+        if error:
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'printers': printers,
+            'count': len(printers),
+            'path_filter': path_filter
+        })
+        
+    except Exception as e:
+        log(f"Error fetching printers: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
