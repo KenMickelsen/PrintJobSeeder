@@ -39,3 +39,4 @@ settings.json
 
 # Request log (contains sensitive request data)
 request_log.txt
+request_log.txt
