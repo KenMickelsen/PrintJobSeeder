@@ -1084,6 +1084,165 @@
             font-family: monospace;
             font-size: 0.9em;
         }
+
+        /* ─── Mode Tabs (Single Job / Bulk Jobs) ─── */
+        .mode-tabs-container {
+            margin-bottom: 20px;
+        }
+
+        .mode-tab-header {
+            display: flex;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .mode-tab-btn {
+            padding: 14px 32px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.05em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .mode-tab-btn:hover:not(.active) {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mode-tab-btn.active {
+            color: #00d9ff;
+            border-bottom-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        /* ─── Single Job Panel ─── */
+        .printer-grouped-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .printer-grouped-select:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+        }
+
+        .printer-grouped-select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .printer-grouped-select optgroup {
+            background: #1a1a2e;
+            color: #aaa;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        .printer-grouped-select option {
+            background: #16213e;
+            color: #fff;
+        }
+
+        .single-job-industry-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .single-industry-radio {
+            display: none;
+        }
+
+        .single-industry-label {
+            padding: 10px 18px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95em;
+            user-select: none;
+        }
+
+        .single-industry-label:hover {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .single-industry-radio:checked + .single-industry-label {
+            border-color: #00d9ff;
+            background: #00d9ff;
+            color: #1a1a2e;
+            font-weight: 600;
+        }
+
+        .btn-send-job {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            color: #1a1a2e;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 700;
+            margin-top: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-send-job:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-send-job:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .single-job-result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .single-job-result.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .single-job-result.error {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        .single-job-result .result-title {
+            font-weight: 600;
+            font-size: 1.05em;
+            margin-bottom: 8px;
+        }
+
+        .single-job-result.success .result-title { color: #00ff88; }
+        .single-job-result.error .result-title { color: #ff6666; }
+
+        .single-job-result .result-detail {
+            font-size: 0.9em;
+            color: #aaa;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -1254,6 +1413,73 @@
                 <input type="hidden" id="bearer_token" name="bearer_token" value="">
             </div>
 
+            <!-- Mode Tabs (Single Job / Bulk Jobs) -->
+            <div class="mode-tabs-container">
+                <div class="mode-tab-header">
+                    <button type="button" class="mode-tab-btn active" data-mode="single">⚡ Single Job</button>
+                    <button type="button" class="mode-tab-btn" data-mode="bulk">📦 Bulk Jobs</button>
+                </div>
+
+                <!-- Single Job Content -->
+                <div class="mode-content" id="mode-content-single">
+                    <div class="card">
+                        <h2>⚡ Single Job</h2>
+                        <p style="color: #888; margin-bottom: 20px;">Fetch your printer list, pick a printer and industry, then send one job at a time.</p>
+
+                        <div class="form-group">
+                            <label>Printers <span class="hint">(grouped by vertical folder)</span></label>
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                                <button type="button" class="btn-get-printers" id="singleJobGetPrintersBtn">
+                                    <span class="btn-text">📥 Get Printers from Vasion</span>
+                                </button>
+                                <span id="singleJobPrinterStatus" style="font-size: 0.85em;"></span>
+                            </div>
+                            <select class="printer-grouped-select" id="singleJobPrinterSelect" disabled>
+                                <option value="">-- Click "Get Printers" to load --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Industry <span class="hint">(determines document type and content)</span></label>
+                            <div class="single-job-industry-selector">
+                                {% for industry in industries %}
+                                <input type="radio" class="single-industry-radio" id="single_ind_{{ industry }}"
+                                       name="single_industry" value="{{ industry }}"
+                                       {% if loop.first %}checked{% endif %}>
+                                <label class="single-industry-label" for="single_ind_{{ industry }}">{{ industry_names[industry] }}</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Document Source</label>
+                            <div class="toggle-switch">
+                                <div class="toggle-option single-pdf-toggle active" data-source="generate">⚡ Generate PDF</div>
+                                <div class="toggle-option single-pdf-toggle" data-source="upload">📁 Upload File</div>
+                            </div>
+                        </div>
+
+                        <!-- Upload section (hidden by default) -->
+                        <div class="pdf-source-section" id="single-upload-section">
+                            <div class="form-group">
+                                <label>PDF File</label>
+                                <input type="file" id="singleJobFileUpload" accept=".pdf">
+                            </div>
+                            <div class="form-group">
+                                <label>Filename <span class="hint">(optional — uses the uploaded file's name if blank)</span></label>
+                                <input type="text" id="singleJobCustomFilename" placeholder="e.g. Patient_Report_JSmith.pdf">
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-send-job" id="sendSingleJobBtn">⚡ Send Job</button>
+
+                        <div class="single-job-result" id="singleJobResult"></div>
+                    </div>
+                </div>
+
+                <!-- Bulk Jobs Content -->
+                <div class="mode-content" id="mode-content-bulk" style="display: none;">
+
             <!-- Timing Settings -->
             <div class="card">
                 <h2>⏱️ Timing Settings</h2>
@@ -1364,6 +1590,9 @@
                     <div class="summary" id="summary"></div>
                 </div>
             </div>
+
+                </div><!-- /mode-content-bulk -->
+            </div><!-- /mode-tabs-container -->
         </form>
     </div>
 
@@ -2631,6 +2860,231 @@
                 submitBtn.textContent = '🚀 Send Print Jobs';
             }
         });
+
+        // =====================================
+        // MODE TABS (Single Job / Bulk Jobs)
+        // =====================================
+
+        let currentMode = localStorage.getItem('printJobSeeder_mode') || 'single';
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            document.getElementById('mode-content-single').style.display = mode === 'single' ? 'block' : 'none';
+            document.getElementById('mode-content-bulk').style.display = mode === 'bulk' ? 'block' : 'none';
+            localStorage.setItem('printJobSeeder_mode', mode);
+        }
+
+        document.querySelectorAll('.mode-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+        });
+
+        // Apply saved mode on load
+        switchMode(currentMode);
+
+        // =====================================
+        // SINGLE JOB FUNCTIONALITY
+        // =====================================
+
+        async function getSingleJobPrinters() {
+            const btn = document.getElementById('singleJobGetPrintersBtn');
+            const btnText = btn.querySelector('.btn-text');
+            const statusSpan = document.getElementById('singleJobPrinterStatus');
+            const select = document.getElementById('singleJobPrinterSelect');
+
+            btn.disabled = true;
+            btnText.textContent = '⏳ Fetching...';
+            statusSpan.textContent = '';
+            statusSpan.style.color = '#888';
+
+            try {
+                const response = await fetch('/api/printers/all');
+                const data = await response.json();
+
+                if (data.success) {
+                    select.innerHTML = '<option value="">-- Select a printer --</option>';
+                    let totalCount = 0;
+
+                    for (const industry of industries) {
+                        const group = data.grouped[industry];
+                        if (!group || group.printers.length === 0) continue;
+
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = group.display_name;
+
+                        group.printers.forEach(printer => {
+                            const option = document.createElement('option');
+                            option.value = printer;
+                            option.textContent = printer;
+                            optgroup.appendChild(option);
+                            totalCount++;
+                        });
+
+                        select.appendChild(optgroup);
+                    }
+
+                    if (totalCount > 0) {
+                        select.disabled = false;
+                        statusSpan.textContent = `✅ ${totalCount} printer(s) loaded`;
+                        statusSpan.style.color = '#00ff88';
+                    } else {
+                        statusSpan.textContent = '⚠️ No printers found. Check folder paths in Settings.';
+                        statusSpan.style.color = '#ffaa00';
+                    }
+
+                    if (data.errors && data.errors.length > 0) {
+                        statusSpan.textContent += ` (${data.errors.length} folder(s) had errors)`;
+                    }
+                } else {
+                    statusSpan.textContent = `❌ ${data.error}`;
+                    statusSpan.style.color = '#ff6666';
+                }
+            } catch (error) {
+                console.error('Error fetching printers:', error);
+                statusSpan.textContent = '❌ Failed to fetch printers';
+                statusSpan.style.color = '#ff6666';
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = '📥 Get Printers from Vasion';
+            }
+        }
+
+        async function sendSingleJob() {
+            const btn = document.getElementById('sendSingleJobBtn');
+            const resultDiv = document.getElementById('singleJobResult');
+            const select = document.getElementById('singleJobPrinterSelect');
+            const printer = select.value;
+
+            resultDiv.style.display = 'none';
+            resultDiv.className = 'single-job-result';
+
+            if (!printer) {
+                resultDiv.className = 'single-job-result error';
+                resultDiv.innerHTML = `<div class="result-title">❌ No printer selected</div>
+                    <div class="result-detail">Please click "Get Printers" and select a printer from the list.</div>`;
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            if (!currentDestination) {
+                resultDiv.className = 'single-job-result error';
+                resultDiv.innerHTML = `<div class="result-title">❌ No destination selected</div>
+                    <div class="result-detail">Please select an API destination in the section above.</div>`;
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            const industryRadio = document.querySelector('.single-industry-radio:checked');
+            const industry = industryRadio ? industryRadio.value : industries[0];
+
+            // Determine PDF source mode
+            const activeToggle = document.querySelector('.single-pdf-toggle.active');
+            const pdfSource = activeToggle ? activeToggle.dataset.source : 'generate';
+
+            // Validate upload if needed
+            if (pdfSource === 'upload') {
+                const fileInput = document.getElementById('singleJobFileUpload');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    resultDiv.className = 'single-job-result error';
+                    resultDiv.innerHTML = `<div class="result-title">❌ No file selected</div>
+                        <div class="result-detail">Please select a PDF file to upload.</div>`;
+                    resultDiv.style.display = 'block';
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Sending...';
+
+            try {
+                const { url, token } = await getDestinationUrlAndToken();
+
+                if (!url) {
+                    throw new Error('No URL configured for the selected destination. Please check Settings.');
+                }
+
+                let response;
+                if (pdfSource === 'upload') {
+                    const fileInput = document.getElementById('singleJobFileUpload');
+                    const customFilename = document.getElementById('singleJobCustomFilename').value.trim();
+
+                    const formData = new FormData();
+                    formData.append('url', url);
+                    formData.append('bearer_token', token || '');
+                    formData.append('printer', printer);
+                    formData.append('industry', industry);
+                    formData.append('pdf_source', 'upload');
+                    formData.append('custom_filename', customFilename);
+                    formData.append('file', fileInput.files[0]);
+
+                    response = await fetch('/api/send-single-job', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    response = await fetch('/api/send-single-job', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, bearer_token: token, printer, industry })
+                    });
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.className = 'single-job-result success';
+                    resultDiv.innerHTML = `
+                        <div class="result-title">✅ Job Sent Successfully</div>
+                        <div class="result-detail">
+                            <strong>Printer:</strong> ${escapeHtml(data.printer)}<br>
+                            <strong>File:</strong> ${escapeHtml(data.filename)}<br>
+                            <strong>User:</strong> ${escapeHtml(data.username)}<br>
+                            <strong>Industry:</strong> ${industryNames[data.industry] || data.industry}<br>
+                            <strong>Status:</strong> ${data.status_code}
+                        </div>`;
+                } else {
+                    resultDiv.className = 'single-job-result error';
+                    resultDiv.innerHTML = `
+                        <div class="result-title">❌ Job Failed</div>
+                        <div class="result-detail">
+                            ${data.status_code ? `<strong>Status:</strong> ${data.status_code}<br>` : ''}
+                            <strong>Error:</strong> ${escapeHtml(data.error || data.response || 'Unknown error')}
+                        </div>`;
+                }
+
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                resultDiv.className = 'single-job-result error';
+                resultDiv.innerHTML = `<div class="result-title">❌ Error</div>
+                    <div class="result-detail">${escapeHtml(error.message)}</div>`;
+                resultDiv.style.display = 'block';
+                console.error('Error sending single job:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Send Job';
+            }
+        }
+
+        // Single Job - PDF source toggle
+        document.querySelectorAll('.single-pdf-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const source = toggle.dataset.source;
+                document.querySelectorAll('.single-pdf-toggle').forEach(t => {
+                    t.classList.toggle('active', t.dataset.source === source);
+                });
+                const uploadSection = document.getElementById('single-upload-section');
+                if (source === 'upload') {
+                    uploadSection.classList.add('active');
+                } else {
+                    uploadSection.classList.remove('active');
+                }
+            });
+        });
+
+        document.getElementById('singleJobGetPrintersBtn').addEventListener('click', getSingleJobPrinters);
+        document.getElementById('sendSingleJobBtn').addEventListener('click', sendSingleJob);
     </script>
 </body>
 </html>
