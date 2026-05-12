@@ -1173,12 +1173,25 @@ def get_all_printers():
 def send_single_job_endpoint():
     """Send a single print job immediately and return the result"""
     try:
-        data = request.get_json()
-
-        url = data.get('url', '').strip()
-        bearer_token = data.get('bearer_token', '').strip()
-        printer = data.get('printer', '').strip()
-        industry = data.get('industry', 'healthcare')
+        # Support both JSON (generate) and multipart/form-data (with optional file upload)
+        content_type = request.content_type or ''
+        if 'application/json' in content_type:
+            data = request.get_json()
+            url = data.get('url', '').strip()
+            bearer_token = data.get('bearer_token', '').strip()
+            printer = data.get('printer', '').strip()
+            industry = data.get('industry', 'healthcare')
+            pdf_source = 'generate'
+            custom_filename = ''
+            uploaded_file = None
+        else:
+            url = request.form.get('url', '').strip()
+            bearer_token = request.form.get('bearer_token', '').strip()
+            printer = request.form.get('printer', '').strip()
+            industry = request.form.get('industry', 'healthcare')
+            pdf_source = request.form.get('pdf_source', 'generate')
+            custom_filename = request.form.get('custom_filename', '').strip()
+            uploaded_file = request.files.get('file')
 
         if not url:
             return jsonify({'success': False, 'error': 'URL is required'}), 400
@@ -1187,23 +1200,46 @@ def send_single_job_endpoint():
         if industry not in INDUSTRIES:
             industry = 'healthcare'
 
-        # Pick a random filename and username from industry presets
-        filename = random.choice(INDUSTRY_PRESETS.get(industry, INDUSTRY_PRESETS['healthcare']))
         username = random.choice(USERNAME_PRESETS.get(industry, USERNAME_PRESETS['healthcare']))
 
-        # Generate a PDF for this job
-        pdf_buffer = generate_pdf(filename, industry, 1, 15)
+        if pdf_source == 'upload' and uploaded_file and uploaded_file.filename:
+            original_filename = secure_filename(uploaded_file.filename)
+            filename = custom_filename if custom_filename else original_filename
+            if not filename.lower().endswith('.pdf'):
+                filename += '.pdf'
 
-        result = send_single_job_from_buffer(
-            url=url,
-            bearer_token=bearer_token,
-            file_buffer=pdf_buffer,
-            filename=filename,
-            username=username,
-            printer=printer,
-            job_number=1,
-            industry=industry
-        )
+            temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'single_{uuid.uuid4()}_{original_filename}')
+            uploaded_file.save(temp_path)
+
+            try:
+                result = send_single_job(
+                    url=url,
+                    bearer_token=bearer_token,
+                    file_path=temp_path,
+                    filename=filename,
+                    username=username,
+                    printer=printer,
+                    job_number=1,
+                    industry=industry
+                )
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+        else:
+            # Generate a PDF
+            filename = random.choice(INDUSTRY_PRESETS.get(industry, INDUSTRY_PRESETS['healthcare']))
+            pdf_buffer = generate_pdf(filename, industry, 1, 15)
+
+            result = send_single_job_from_buffer(
+                url=url,
+                bearer_token=bearer_token,
+                file_buffer=pdf_buffer,
+                filename=filename,
+                username=username,
+                printer=printer,
+                job_number=1,
+                industry=industry
+            )
 
         return jsonify({
             'success': result['success'],

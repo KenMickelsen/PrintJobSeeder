@@ -1451,6 +1451,26 @@
                             </div>
                         </div>
 
+                        <div class="form-group">
+                            <label>Document Source</label>
+                            <div class="toggle-switch">
+                                <div class="toggle-option single-pdf-toggle active" data-source="generate">⚡ Generate PDF</div>
+                                <div class="toggle-option single-pdf-toggle" data-source="upload">📁 Upload File</div>
+                            </div>
+                        </div>
+
+                        <!-- Upload section (hidden by default) -->
+                        <div class="pdf-source-section" id="single-upload-section">
+                            <div class="form-group">
+                                <label>PDF File</label>
+                                <input type="file" id="singleJobFileUpload" accept=".pdf">
+                            </div>
+                            <div class="form-group">
+                                <label>Filename <span class="hint">(optional — uses the uploaded file's name if blank)</span></label>
+                                <input type="text" id="singleJobCustomFilename" placeholder="e.g. Patient_Report_JSmith.pdf">
+                            </div>
+                        </div>
+
                         <button type="button" class="btn-send-job" id="sendSingleJobBtn">⚡ Send Job</button>
 
                         <div class="single-job-result" id="singleJobResult"></div>
@@ -2959,6 +2979,22 @@
             const industryRadio = document.querySelector('.single-industry-radio:checked');
             const industry = industryRadio ? industryRadio.value : industries[0];
 
+            // Determine PDF source mode
+            const activeToggle = document.querySelector('.single-pdf-toggle.active');
+            const pdfSource = activeToggle ? activeToggle.dataset.source : 'generate';
+
+            // Validate upload if needed
+            if (pdfSource === 'upload') {
+                const fileInput = document.getElementById('singleJobFileUpload');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    resultDiv.className = 'single-job-result error';
+                    resultDiv.innerHTML = `<div class="result-title">❌ No file selected</div>
+                        <div class="result-detail">Please select a PDF file to upload.</div>`;
+                    resultDiv.style.display = 'block';
+                    return;
+                }
+            }
+
             btn.disabled = true;
             btn.textContent = '⏳ Sending...';
 
@@ -2969,11 +3005,31 @@
                     throw new Error('No URL configured for the selected destination. Please check Settings.');
                 }
 
-                const response = await fetch('/api/send-single-job', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, bearer_token: token, printer, industry })
-                });
+                let response;
+                if (pdfSource === 'upload') {
+                    const fileInput = document.getElementById('singleJobFileUpload');
+                    const customFilename = document.getElementById('singleJobCustomFilename').value.trim();
+
+                    const formData = new FormData();
+                    formData.append('url', url);
+                    formData.append('bearer_token', token || '');
+                    formData.append('printer', printer);
+                    formData.append('industry', industry);
+                    formData.append('pdf_source', 'upload');
+                    formData.append('custom_filename', customFilename);
+                    formData.append('file', fileInput.files[0]);
+
+                    response = await fetch('/api/send-single-job', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    response = await fetch('/api/send-single-job', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, bearer_token: token, printer, industry })
+                    });
+                }
 
                 const data = await response.json();
 
@@ -3010,6 +3066,22 @@
                 btn.textContent = '⚡ Send Job';
             }
         }
+
+        // Single Job - PDF source toggle
+        document.querySelectorAll('.single-pdf-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const source = toggle.dataset.source;
+                document.querySelectorAll('.single-pdf-toggle').forEach(t => {
+                    t.classList.toggle('active', t.dataset.source === source);
+                });
+                const uploadSection = document.getElementById('single-upload-section');
+                if (source === 'upload') {
+                    uploadSection.classList.add('active');
+                } else {
+                    uploadSection.classList.remove('active');
+                }
+            });
+        });
 
         document.getElementById('singleJobGetPrintersBtn').addEventListener('click', getSingleJobPrinters);
         document.getElementById('sendSingleJobBtn').addEventListener('click', sendSingleJob);
