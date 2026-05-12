@@ -1807,8 +1807,8 @@ if __name__ == '__main__':
     
     def open_browser():
         time.sleep(1.5)  # Wait for server to start
-        webbrowser.open('http://localhost:5000')
+        webbrowser.open('http://localhost:5757')
     
     threading.Thread(target=open_browser, daemon=True).start()
     
-    app.run(debug=False, host='localhost', port=5000)
+    app.run(debug=False, host='localhost', port=5757)
