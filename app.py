@@ -1121,6 +1121,105 @@ def get_printers_for_industry(industry):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/printers/all', methods=['GET'])
+def get_all_printers():
+    """Fetch printers for every configured industry vertical, grouped by industry"""
+    try:
+        settings = load_settings()
+
+        region = settings['cloud_link'].get('region', '')
+        api_key = deobfuscate_key(settings['cloud_link'].get('api_key', ''))
+
+        if not region or not api_key:
+            return jsonify({
+                'success': False,
+                'error': 'API Cloud Link must be configured to fetch printers. Please configure it in Settings.'
+            }), 400
+
+        base_url = get_cloud_base_url(region)
+        if not base_url:
+            return jsonify({'success': False, 'error': f'Invalid cloud region: {region}'}), 400
+
+        industry_paths = settings.get('industry_paths', get_default_settings()['industry_paths'])
+
+        grouped = {}
+        errors = []
+
+        for industry in INDUSTRIES:
+            path_filter = industry_paths.get(industry, f'*{industry.capitalize()}*')
+            if not path_filter:
+                continue
+            printers, error = fetch_printers_from_api(api_key, base_url, path_filter)
+            if error:
+                errors.append(f'{industry}: {error}')
+            else:
+                grouped[industry] = {
+                    'display_name': INDUSTRY_DISPLAY_NAMES[industry],
+                    'printers': printers
+                }
+
+        return jsonify({
+            'success': True,
+            'grouped': grouped,
+            'errors': errors
+        })
+
+    except Exception as e:
+        log(f"Error fetching all printers: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/send-single-job', methods=['POST'])
+def send_single_job_endpoint():
+    """Send a single print job immediately and return the result"""
+    try:
+        data = request.get_json()
+
+        url = data.get('url', '').strip()
+        bearer_token = data.get('bearer_token', '').strip()
+        printer = data.get('printer', '').strip()
+        industry = data.get('industry', 'healthcare')
+
+        if not url:
+            return jsonify({'success': False, 'error': 'URL is required'}), 400
+        if not printer:
+            return jsonify({'success': False, 'error': 'Printer name is required'}), 400
+        if industry not in INDUSTRIES:
+            industry = 'healthcare'
+
+        # Pick a random filename and username from industry presets
+        filename = random.choice(INDUSTRY_PRESETS.get(industry, INDUSTRY_PRESETS['healthcare']))
+        username = random.choice(USERNAME_PRESETS.get(industry, USERNAME_PRESETS['healthcare']))
+
+        # Generate a PDF for this job
+        pdf_buffer = generate_pdf(filename, industry, 1, 15)
+
+        result = send_single_job_from_buffer(
+            url=url,
+            bearer_token=bearer_token,
+            file_buffer=pdf_buffer,
+            filename=filename,
+            username=username,
+            printer=printer,
+            job_number=1,
+            industry=industry
+        )
+
+        return jsonify({
+            'success': result['success'],
+            'filename': result['filename'],
+            'username': result['username'],
+            'printer': result['printer'],
+            'industry': industry,
+            'status_code': result['status_code'],
+            'response': result['response']
+        })
+
+    except Exception as e:
+        log(f"Error in send-single-job: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/presets', methods=['GET'])
 def get_presets():
     """Return industry presets as JSON"""
