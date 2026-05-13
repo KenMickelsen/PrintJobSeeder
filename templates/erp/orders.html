@@ -1,0 +1,393 @@
+{% extends "erp/base.html" %}
+
+{% block title %}Orders{% endblock %}
+{% block breadcrumb %}Orders{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between" style="margin-bottom:20px;">
+  <div class="page-title" style="margin-bottom:0;">Orders</div>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding-bottom:0;">
+    <div class="tab-bar">
+      <button class="tab-btn {% if tab == 'work_orders' %}active{% endif %}" data-tab="work_orders">
+        Work Orders ({{ work_orders|length }})
+      </button>
+      <button class="tab-btn {% if tab == 'purchase_orders' %}active{% endif %}" data-tab="purchase_orders">
+        Purchase Orders ({{ purchase_orders|length }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Work Orders tab -->
+  <div id="tab-work_orders" class="tab-pane {% if tab == 'work_orders' %}active{% endif %}">
+    <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-primary btn-sm" id="wo-print-selected" disabled>
+        Print Selected (0)
+      </button>
+      <span class="text-muted" style="font-size:12px;">Select rows to print as a batch.</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="check-col">
+              <input type="checkbox" id="wo-check-all" />
+            </th>
+            <th>Work Order</th>
+            <th>Part Number</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Operator</th>
+            <th>Customer</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for wo in work_orders %}
+          <tr data-id="{{ wo.id }}" data-type="wo">
+            <td class="check-col">
+              <input type="checkbox" class="wo-row-check" data-id="{{ wo.id }}" />
+            </td>
+            <td><strong>{{ wo.id }}</strong></td>
+            <td class="text-muted">{{ wo.part_number }}</td>
+            <td>{{ wo.description }}</td>
+            <td>{{ wo.quantity }}</td>
+            <td>{{ wo.operator }}</td>
+            <td>{{ wo.customer }}</td>
+            <td class="text-muted">{{ wo.due_date }}</td>
+            <td><span class="badge {{ 'badge-open' if wo.status == 'Open' else 'badge-progress' if wo.status == 'In Progress' else 'badge-complete' if wo.status == 'Complete' else 'badge-hold' }}">{{ wo.status }}</span></td>
+            <td>
+              <button class="btn btn-secondary btn-sm print-single-btn" data-id="{{ wo.id }}">Print</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Purchase Orders tab -->
+  <div id="tab-purchase_orders" class="tab-pane {% if tab == 'purchase_orders' %}active{% endif %}">
+    <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-primary btn-sm" id="po-print-selected" disabled>
+        Print Selected (0)
+      </button>
+      <span class="text-muted" style="font-size:12px;">Select rows to print as a batch.</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="check-col">
+              <input type="checkbox" id="po-check-all" />
+            </th>
+            <th>PO Number</th>
+            <th>Vendor</th>
+            <th>Line Items</th>
+            <th>Amount</th>
+            <th>Buyer</th>
+            <th>Order Date</th>
+            <th>Expected</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for po in purchase_orders %}
+          <tr data-id="{{ po.id }}" data-type="po">
+            <td class="check-col">
+              <input type="checkbox" class="po-row-check" data-id="{{ po.id }}" />
+            </td>
+            <td><strong>{{ po.id }}</strong></td>
+            <td>{{ po.vendor }}</td>
+            <td class="text-muted">{{ po.line_items }}</td>
+            <td>${{ '{:,.2f}'.format(po.amount) }}</td>
+            <td>{{ po.buyer }}</td>
+            <td class="text-muted">{{ po.order_date }}</td>
+            <td class="text-muted">{{ po.expected_date }}</td>
+            <td><span class="badge {{ 'badge-pending' if po.status == 'Pending' else 'badge-approved' if po.status == 'Approved' else 'badge-received' if po.status == 'Received' else 'badge-invoiced' }}">{{ po.status }}</span></td>
+            <td>
+              <button class="btn btn-secondary btn-sm print-single-btn" data-id="{{ po.id }}">Print</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Print Modal -->
+<div class="modal-backdrop" id="bulk-print-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Bulk Print Orders</span>
+      <button class="modal-close" id="close-bulk-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Printer</label>
+        <select class="form-control" id="bulk-printer-select">
+          <option value="">Loading printers...</option>
+        </select>
+      </div>
+
+      <div id="bulk-progress-section" style="display:none;">
+        <div class="flex justify-between items-center mt-3" style="margin-bottom:6px;">
+          <span style="font-size:13px;" id="bulk-progress-label">Sending...</span>
+          <span style="font-size:12px;" class="text-muted" id="bulk-progress-count">0 / 0</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="bulk-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="job-log mt-3" id="bulk-job-log"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-bulk-btn">Cancel</button>
+      <button class="btn btn-primary" id="start-bulk-btn">Send to Printer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Single Print Printer Picker Modal -->
+<div class="modal-backdrop" id="single-print-modal">
+  <div class="modal" style="width:400px;">
+    <div class="modal-header">
+      <span class="modal-title">Print Order</span>
+      <button class="modal-close" id="close-single-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
+        Printing order <strong id="single-order-id"></strong>
+      </p>
+      <div class="form-group">
+        <label class="form-label">Printer</label>
+        <select class="form-control" id="single-printer-select">
+          <option value="">Loading printers...</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-single-btn">Cancel</button>
+      <button class="btn btn-primary" id="confirm-single-btn">Print</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Tab switching ─────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Checkbox logic ────────────────────────────────────────
+function setupCheckboxes(rowClass, allId, btnId) {
+  const allChk  = document.getElementById(allId);
+  const printBtn = document.getElementById(btnId);
+
+  function updateBtn() {
+    const checked = document.querySelectorAll(`.${rowClass}:checked`);
+    printBtn.disabled = checked.length === 0;
+    printBtn.textContent = `Print Selected (${checked.length})`;
+  }
+
+  allChk.addEventListener('change', () => {
+    document.querySelectorAll(`.${rowClass}`).forEach(c => c.checked = allChk.checked);
+    updateBtn();
+  });
+
+  document.querySelectorAll(`.${rowClass}`).forEach(c => {
+    c.addEventListener('change', updateBtn);
+  });
+
+  return { printBtn };
+}
+
+const { printBtn: woPrintBtn } = setupCheckboxes('wo-row-check', 'wo-check-all', 'wo-print-selected');
+const { printBtn: poPrintBtn } = setupCheckboxes('po-row-check', 'po-check-all', 'po-print-selected');
+
+// ── Load printers ─────────────────────────────────────────
+let printersCache = [];
+
+async function loadPrinters(selectEl) {
+  if (printersCache.length) {
+    populatePrinterSelect(selectEl, printersCache);
+    return;
+  }
+  selectEl.innerHTML = '<option value="">Loading...</option>';
+  try {
+    const r = await fetch('/api/erp/printers?industry=manufacturing');
+    const d = await r.json();
+    if (d.success && d.printers.length) {
+      printersCache = d.printers;
+      populatePrinterSelect(selectEl, printersCache);
+    } else {
+      selectEl.innerHTML = '<option value="">No printers found — check Admin settings</option>';
+    }
+  } catch(e) {
+    selectEl.innerHTML = '<option value="">Error loading printers</option>';
+  }
+}
+
+function populatePrinterSelect(selectEl, printers) {
+  selectEl.innerHTML = '<option value="">Select a printer...</option>' +
+    printers.map(p => `<option value="${p}">${p}</option>`).join('');
+  // Restore last-used printer if it's still in the list
+  const saved = localStorage.getItem('pjs_lastPrinter');
+  if (saved && [...selectEl.options].some(o => o.value === saved)) selectEl.value = saved;
+}
+
+// ── Single print ──────────────────────────────────────────
+let pendingSingleId = null;
+
+document.querySelectorAll('.print-single-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pendingSingleId = btn.dataset.id;
+    document.getElementById('single-order-id').textContent = pendingSingleId;
+    document.getElementById('single-print-modal').classList.add('open');
+    loadPrinters(document.getElementById('single-printer-select'));
+  });
+});
+
+document.getElementById('close-single-modal').addEventListener('click', () => {
+  document.getElementById('single-print-modal').classList.remove('open');
+});
+document.getElementById('cancel-single-btn').addEventListener('click', () => {
+  document.getElementById('single-print-modal').classList.remove('open');
+});
+
+document.getElementById('confirm-single-btn').addEventListener('click', async () => {
+  const printer = document.getElementById('single-printer-select').value;
+  if (!printer) { showToast('Please select a printer.', 'error'); return; }
+
+  document.getElementById('single-print-modal').classList.remove('open');
+
+  try {
+    const r = await fetch('/api/erp/print-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: pendingSingleId, printer })
+    });
+    const d = await r.json();
+    if (d.success) {
+      localStorage.setItem('pjs_lastPrinter', printer);
+      showToast(`${pendingSingleId} sent to printer successfully.`, 'success');
+    } else {
+      showToast(`Print failed: ${d.message}`, 'error');
+    }
+  } catch(e) {
+    showToast('Network error — could not send print job.', 'error');
+  }
+});
+
+// ── Bulk print ────────────────────────────────────────────
+let activeBulkSession = null;
+
+function openBulkModal(orderIds) {
+  document.getElementById('bulk-print-modal').classList.add('open');
+  document.getElementById('bulk-progress-section').style.display = 'none';
+  document.getElementById('bulk-job-log').innerHTML = '';
+  document.getElementById('bulk-progress-fill').style.width = '0%';
+  document.getElementById('start-bulk-btn').disabled = false;
+  document.getElementById('start-bulk-btn').textContent = 'Send to Printer';
+  document.getElementById('cancel-bulk-btn').textContent = 'Cancel';
+  loadPrinters(document.getElementById('bulk-printer-select'));
+  window._bulkOrderIds = orderIds;
+}
+
+woPrintBtn.addEventListener('click', () => {
+  const ids = [...document.querySelectorAll('.wo-row-check:checked')].map(c => c.dataset.id);
+  openBulkModal(ids);
+});
+poPrintBtn.addEventListener('click', () => {
+  const ids = [...document.querySelectorAll('.po-row-check:checked')].map(c => c.dataset.id);
+  openBulkModal(ids);
+});
+
+document.getElementById('close-bulk-modal').addEventListener('click', stopBulkAndClose);
+document.getElementById('cancel-bulk-btn').addEventListener('click', stopBulkAndClose);
+
+function stopBulkAndClose() {
+  if (activeBulkSession) {
+    fetch(`/api/erp/stop-jobs/${activeBulkSession}`, { method: 'POST' });
+    activeBulkSession = null;
+  }
+  document.getElementById('bulk-print-modal').classList.remove('open');
+}
+
+document.getElementById('start-bulk-btn').addEventListener('click', async () => {
+  const printer = document.getElementById('bulk-printer-select').value;
+  if (!printer) { showToast('Please select a printer.', 'error'); return; }
+
+  const orderIds = window._bulkOrderIds || [];
+  const numJobs = orderIds.length;
+
+  document.getElementById('bulk-progress-section').style.display = 'block';
+  document.getElementById('start-bulk-btn').disabled = true;
+  document.getElementById('cancel-bulk-btn').textContent = 'Stop';
+  document.getElementById('bulk-progress-label').textContent = `Sending ${numJobs} jobs...`;
+  document.getElementById('bulk-progress-count').textContent = `0 / ${numJobs}`;
+
+  const form = new FormData();
+  form.append('industry', 'manufacturing');
+  form.append('num_jobs', numJobs);
+  form.append('timing_mode', 'random');
+  form.append('printer', printer);
+
+  try {
+    const r = await fetch('/api/erp/start-print-run', { method: 'POST', body: form });
+    const d = await r.json();
+    if (!d.success) { showToast(d.error || 'Failed to start print run.', 'error'); return; }
+    localStorage.setItem('pjs_lastPrinter', printer);
+    activeBulkSession = d.session_id;
+    streamBulkJobs(activeBulkSession, numJobs);
+  } catch(e) {
+    showToast('Network error.', 'error');
+  }
+});
+
+function streamBulkJobs(sessionId, total) {
+  const log = document.getElementById('bulk-job-log');
+  const fill = document.getElementById('bulk-progress-fill');
+  const countEl = document.getElementById('bulk-progress-count');
+  const labelEl = document.getElementById('bulk-progress-label');
+  let done = 0;
+
+  const es = new EventSource(`/api/erp/stream-jobs/${sessionId}`);
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'complete') {
+      es.close();
+      activeBulkSession = null;
+      labelEl.textContent = `Done — ${data.success}/${data.total} succeeded`;
+      document.getElementById('cancel-bulk-btn').textContent = 'Close';
+      document.getElementById('start-bulk-btn').disabled = false;
+      return;
+    }
+    done++;
+    const pct = Math.round((done / total) * 100);
+    fill.style.width = pct + '%';
+    countEl.textContent = `${done} / ${total}`;
+    const cls = data.success ? 'log-success' : 'log-error';
+    const icon = data.success ? '+' : 'x';
+    log.innerHTML += `<div class="${cls}">[${icon}] Job ${data.job_number} — ${data.filename} (${data.printer})</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+  es.onerror = () => es.close();
+}
+</script>
+{% endblock %}

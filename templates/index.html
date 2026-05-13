@@ -2929,6 +2929,11 @@
                         select.disabled = false;
                         statusSpan.textContent = `✅ ${totalCount} printer(s) loaded`;
                         statusSpan.style.color = '#00ff88';
+                        // Restore last-used printer if it's still in the list
+                        const savedPrinter = localStorage.getItem('pjs_lastPrinter');
+                        if (savedPrinter && [...select.options].some(o => o.value === savedPrinter)) {
+                            select.value = savedPrinter;
+                        }
                     } else {
                         statusSpan.textContent = '⚠️ No printers found. Check folder paths in Settings.';
                         statusSpan.style.color = '#ffaa00';
@@ -3034,6 +3039,7 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    localStorage.setItem('pjs_lastPrinter', printer);
                     resultDiv.className = 'single-job-result success';
                     resultDiv.innerHTML = `
                         <div class="result-title">✅ Job Sent Successfully</div>
@@ -3085,6 +3091,9 @@
 
         document.getElementById('singleJobGetPrintersBtn').addEventListener('click', getSingleJobPrinters);
         document.getElementById('sendSingleJobBtn').addEventListener('click', sendSingleJob);
+        document.getElementById('singleJobPrinterSelect').addEventListener('change', function() {
+            if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
+        });
     </script>
 </body>
 </html>

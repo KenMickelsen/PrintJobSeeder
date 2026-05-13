@@ -2,6 +2,8 @@
 
 A utility for sending bulk print jobs to Vasion Output's API with industry-specific metadata. Perfect for populating the Output Console with realistic-looking print jobs for demos and testing.
 
+> **Also includes the [Apex Industrial ERP Demo](#apex-industrial-erp-demo) — a full fake manufacturing ERP UI that wraps the same print engine, great for customer-facing demos.**
+
 ## Features
 
 - 🖨️ Send multiple print jobs to Vasion Output API
@@ -31,8 +33,8 @@ A utility for sending bulk print jobs to Vasion Output's API with industry-speci
    - Kill any existing instances (prevents conflicts)
    - Create a Python virtual environment (first run only)
    - Install all required dependencies (first run only)
-   - Start the Flask server
-   - Automatically open the web interface in your browser
+   - Start the Flask server on **port 5757**
+   - Automatically open the web interface in your browser at `http://localhost:5757`
 
 2. **Configure Settings (gear icon):**
    - **API Cloud Link**: Select your Vasion Cloud region and enter your API key
@@ -64,14 +66,35 @@ A utility for sending bulk print jobs to Vasion Output's API with industry-speci
 
 7. **Click "Send Print Jobs"** and watch the progress!
 
-## Batch Scripts
+## Batch Scripts (Windows)
 
 Two convenience scripts are provided for managing the application:
 
 | Script | Purpose |
 |--------|---------|
-| `Start-PrintJobSeeder.bat` | Start the server (kills existing instances first, installs deps if needed) |
+| `Start-PrintJobSeeder.bat` | Start the server on port 5757 (kills existing instances first, installs deps if needed) |
 | `Stop-PrintJobSeeder.bat` | Stop the server cleanly |
+| `Start-ERPDemo.bat` | Start the Apex Industrial ERP Demo on port 5758 |
+| `Stop-ERPDemo.bat` | Stop the ERP Demo |
+
+## Mac / Linux
+
+Shell script equivalents are included. Make them executable once, then run them directly:
+
+```bash
+chmod +x Start-PrintJobSeeder.sh Stop-PrintJobSeeder.sh
+chmod +x Start-ERPDemo.sh Stop-ERPDemo.sh
+
+# Start the Print Job Seeder (port 5757)
+./Start-PrintJobSeeder.sh
+
+# Start the ERP Demo (port 5758)
+./Start-ERPDemo.sh
+```
+
+The shell scripts use `nohup` to run in the background and write logs to `printjobseeder.log` / `erp_demo.log`. A `.pid` file is created so the Stop script can cleanly terminate the process.
+
+> **Note on port 5000**: macOS Monterey and later uses port 5000 for AirPlay Receiver. Both apps use different ports (5757 and 5758) to avoid this conflict.
 
 ## API Destinations
 
@@ -266,6 +289,83 @@ The tool supports sending jobs for multiple industries simultaneously:
 4. Results show which industry each job belongs to
 
 This is useful for demos showing a mixed-use print environment (e.g., a hospital with medical, legal, and finance departments).
+
+## Apex Industrial ERP Demo
+
+The `erp-demo` branch includes a second Flask application (`app_erp.py`) that wraps the same Vasion print engine inside a polished, customer-facing fake manufacturing ERP system called **Apex Industrial**.
+
+This is designed for use during sales demos to show Vasion Output integrated naturally into an enterprise workflow — rather than as a standalone tool.
+
+### What it looks like
+
+The ERP UI is a clean, professional enterprise interface with:
+
+- **Fixed left sidebar** — Apex Industrial branding, navy color scheme (`#1c3557`)
+- **Dashboard** — 4 KPI cards (Work Orders, Open POs, On-Time Delivery %, Print Jobs Today) + two Chart.js charts (Orders Over Time, Print Job Volume)
+- **Orders** — Work Orders and Purchase Orders tables with checkboxes, status badges, per-row Print buttons, and bulk-print with real-time SSE progress
+- **Customers** — 15 fake manufacturing companies with contacts and cities
+- **Print Queue** — Single-job quick-send and configurable background print run panels with live job log
+- **Admin** — Full settings page (same fields as the main app: Cloud Link, On-Premise, industry paths)
+
+### Running the ERP Demo
+
+**Windows:**
+```
+Start-ERPDemo.bat
+```
+
+**Mac/Linux:**
+```bash
+./Start-ERPDemo.sh
+```
+
+Or manually:
+```bash
+source venv/bin/activate
+python app_erp.py
+```
+
+Opens at **http://localhost:5758**.
+
+### Architecture
+
+| File | Purpose |
+|------|---------|
+| `app_erp.py` | Flask app (port 5758), fake data generators, all ERP routes and API endpoints |
+| `templates/erp/base.html` | Enterprise layout: sidebar, header, cards, modals, toast system |
+| `templates/erp/dashboard.html` | KPI cards + Chart.js charts + recent activity table |
+| `templates/erp/orders.html` | Work Orders / Purchase Orders tabs with bulk print flow |
+| `templates/erp/customers.html` | Customer accounts table |
+| `templates/erp/print_queue.html` | Single job + bulk run panels with SSE streaming |
+| `templates/erp/admin.html` | Settings admin page (connected to shared `settings.json`) |
+
+### Fake Data
+
+At startup, `app_erp.py` generates stable fake data (seeded with `random.seed(42)`):
+
+- **30 Work Orders** — WO-XXXXX IDs, part numbers (e.g. `BKT-45821`), operators, customers, statuses (Open / In Progress / Complete / On Hold)
+- **20 Purchase Orders** — PO-XXXXX IDs, vendors, amounts, buyer names, statuses (Pending / Approved / Received / Invoiced)
+- **15 Customers** — Named manufacturing companies (e.g. Harrington Aerospace, Titan Automotive) with contacts and cities
+- **Dashboard data** — 30-day chart history (randomized but stable per process), recent activity feed
+
+All usernames in the manufacturing industry use `@apexindustrial.com` email addresses.
+
+## Shared Module: print_utils.py
+
+All print engine logic that is shared between `app.py` (Print Job Seeder) and `app_erp.py` (ERP Demo) lives in `print_utils.py`. This avoids duplication and ensures both apps behave identically.
+
+**What's in `print_utils.py`:**
+- All constants: `CLOUD_REGIONS`, `INDUSTRIES`, `INDUSTRY_PRESETS`, `USERNAME_PRESETS`, `INDUSTRY_CONTENT`, `LOREM_IPSUM`
+- Settings helpers: `load_settings()`, `save_settings()`, `get_default_settings()`
+- Key obfuscation: `obfuscate_key()`, `deobfuscate_key()`
+- URL builders: `build_onprem_url()`, `get_cloud_base_url()`
+- API: `fetch_printers_from_api()`
+- PDF generation: `generate_pdf()`
+- Timing: `generate_random_delay()`
+- Print job sending: `send_single_job()`, `send_single_job_from_buffer()`
+- Logging: `log()`
+
+Both apps share the same `settings.json` file, so credentials configured in one app are available in the other.
 
 ## Notes
 

@@ -1,0 +1,45 @@
+{% extends "erp/base.html" %}
+
+{% block title %}Customers{% endblock %}
+{% block breadcrumb %}Customers{% endblock %}
+
+{% block content %}
+<div class="page-title">Customers</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Active Accounts ({{ customers|length }})</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Company</th>
+        <th>Primary Contact</th>
+        <th>Location</th>
+        <th>Active Orders</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for name, city, contact in customers %}
+      <tr>
+        <td class="text-muted" style="width:40px;">{{ loop.index }}</td>
+        <td><strong>{{ name }}</strong></td>
+        <td>{{ contact }}</td>
+        <td class="text-muted">{{ city }}</td>
+        <td>
+          {% set count = loop.index % 5 %}
+          {% if count == 0 %}
+            <span class="badge badge-open">{{ loop.index % 4 + 1 }} orders</span>
+          {% elif count < 3 %}
+            <span class="badge badge-progress">{{ loop.index % 3 + 1 }} orders</span>
+          {% else %}
+            <span class="badge badge-complete">{{ loop.index % 2 + 1 }} orders</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
