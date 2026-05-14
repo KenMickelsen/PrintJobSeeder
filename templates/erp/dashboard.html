@@ -80,8 +80,8 @@
         <td>{{ item.user }}</td>
         <td class="text-muted">{{ item.time }}</td>
         <td>
-          {% if item.type == 'Work Order' %}
-          <button class="btn btn-secondary btn-sm dash-print-btn" data-id="{{ item.ref }}">Print</button>
+          {% if item.type == 'Work Order' or item.type == 'Purchase Order' %}
+          <button class="btn btn-secondary btn-sm dash-print-btn" data-id="{{ item.ref }}" data-type="{{ item.type }}">Print</button>
           {% endif %}
         </td>
       </tr>
@@ -94,12 +94,12 @@
 <div class="modal-backdrop" id="dash-print-modal">
   <div class="modal" style="width:400px;">
     <div class="modal-header">
-      <span class="modal-title">Print Work Order</span>
+      <span class="modal-title" id="dash-modal-title">Print Document</span>
       <button class="modal-close" id="close-dash-modal">&times;</button>
     </div>
     <div class="modal-body">
       <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
-        Printing work order <strong id="dash-order-id"></strong>
+        Printing <span id="dash-doc-type"></span> <strong id="dash-order-id"></strong>
       </p>
       <div class="form-group">
         <label class="form-label">Printer</label>
@@ -210,6 +210,9 @@ function populateDashPrinters(selectEl) {
 document.querySelectorAll('.dash-print-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     pendingDashId = btn.dataset.id;
+    const docType = btn.dataset.type || 'Work Order';
+    document.getElementById('dash-modal-title').textContent = `Print ${docType}`;
+    document.getElementById('dash-doc-type').textContent = docType === 'Purchase Order' ? 'purchase order' : 'work order';
     document.getElementById('dash-order-id').textContent = pendingDashId;
     document.getElementById('confirm-dash-btn').disabled = false;
     document.getElementById('confirm-dash-btn').textContent = 'Print';
