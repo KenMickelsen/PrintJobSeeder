@@ -243,9 +243,13 @@ def orders():
 
 @app.route('/customers')
 def customers():
+    customer_orders = {}
+    for wo in WORK_ORDERS:
+        customer_orders.setdefault(wo['customer'], []).append(wo['id'])
     return render_template('erp/customers.html',
                            page='customers',
-                           customers=CUSTOMERS)
+                           customers=CUSTOMERS,
+                           customer_orders=customer_orders)
 
 
 @app.route('/print-queue')
@@ -397,24 +401,30 @@ def erp_print_order():
 @app.route('/api/erp/start-print-run', methods=['POST'])
 def erp_start_print_run():
     """Start a bulk manufacturing print run. Returns session_id for SSE stream."""
-    destination = request.form.get('destination', 'cloud_link')
     industry = request.form.get('industry', 'manufacturing')
     num_jobs = int(request.form.get('num_jobs', 10))
     timing_mode = request.form.get('timing_mode', 'random')
     fixed_delay = float(request.form.get('fixed_delay', 1.0))
     min_delay = float(request.form.get('min_delay', 0.5))
     max_delay = float(request.form.get('max_delay', 30.0))
-    printer = request.form.get('printer', '')
-
-    if not printer:
-        return jsonify({'success': False, 'error': 'No printer selected'}), 400
 
     settings = load_settings()
+    destination = settings.get('destination', 'cloud_link')
+
+    # If a specific printer was passed (e.g. from customer/dashboard print buttons), use it directly
+    specific_printer = request.form.get('printer', '').strip()
 
     if destination == 'on_premise':
         url = build_onprem_url(settings)
         raw_token = settings['on_premise'].get('bearer_token', '')
         bearer_token = f'Bearer {raw_token}' if raw_token and not raw_token.startswith('Bearer ') else raw_token
+        if specific_printer:
+            printers = [specific_printer]
+        else:
+            path_filter = settings.get('industry_paths', {}).get(industry, f'*{industry.title()}*')
+            raw_key = deobfuscate_key(settings['cloud_link'].get('api_key', ''))
+            region = settings['cloud_link'].get('region', '')
+            printers, _ = fetch_printers_from_api(raw_key, get_cloud_base_url(region), path_filter) if (region and raw_key) else ([], None)
     else:
         region = settings['cloud_link'].get('region', '')
         raw_key = deobfuscate_key(settings['cloud_link'].get('api_key', ''))
@@ -423,6 +433,13 @@ def erp_start_print_run():
         base = get_cloud_base_url(region)
         url = f'{base}/v1/print'
         bearer_token = f'Bearer {raw_key}'
+        if specific_printer:
+            printers = [specific_printer]
+        else:
+            path_filter = settings.get('industry_paths', {}).get(industry, f'*{industry.title()}*')
+            printers, fetch_error = fetch_printers_from_api(raw_key, base, path_filter)
+            if not printers:
+                return jsonify({'success': False, 'error': fetch_error or 'No printers found in that folder'}), 400
 
     if not url:
         return jsonify({'success': False, 'error': 'Print destination not configured'}), 400
@@ -440,16 +457,16 @@ def erp_start_print_run():
     thread = threading.Thread(
         target=_run_print_jobs,
         args=(session_id, url, bearer_token, industry, num_jobs,
-              timing_mode, fixed_delay, min_delay, max_delay, printer),
+              timing_mode, fixed_delay, min_delay, max_delay, printers),
         daemon=True
     )
     thread.start()
-    log(f"ERP print run started: session={session_id}, jobs={num_jobs}, industry={industry}")
-    return jsonify({'success': True, 'session_id': session_id})
+    log(f"ERP print run started: session={session_id}, jobs={num_jobs}, industry={industry}, printers={len(printers)}")
+    return jsonify({'success': True, 'session_id': session_id, 'printer_count': len(printers)})
 
 
 def _run_print_jobs(session_id, url, bearer_token, industry, num_jobs,
-                    timing_mode, fixed_delay, min_delay, max_delay, printer):
+                    timing_mode, fixed_delay, min_delay, max_delay, printers):
     """Worker thread: sends print jobs and updates session state."""
     import time
     session = job_sessions[session_id]
@@ -460,8 +477,9 @@ def _run_print_jobs(session_id, url, bearer_token, industry, num_jobs,
         if session['stop_flag']:
             break
 
-        filename = random.choice(filenames)
-        username = random.choice(usernames)
+        filename = filenames[(i - 1) % len(filenames)]
+        username = usernames[(i - 1) % len(usernames)]
+        printer = printers[(i - 1) % len(printers)]
 
         buffer = generate_pdf(filename, industry, min_pages=1, max_pages=8)
         result = send_single_job_from_buffer(

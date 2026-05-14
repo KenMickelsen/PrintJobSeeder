@@ -79,7 +79,21 @@ Two convenience scripts are provided for managing the application:
 
 ## Mac / Linux
 
-Shell script equivalents are included. Make them executable once, then run them directly:
+### Double-click launcher (Mac)
+
+`.command` files are included so you can launch either app with a double-click in Finder — no terminal required.
+
+Run this **once** after cloning or copying the repo to make them executable:
+
+```bash
+chmod +x Start-PrintJobSeeder.command Start-ERPDemo.command
+```
+
+After that, just double-click **`Start-PrintJobSeeder.command`** or **`Start-ERPDemo.command`** in Finder. macOS will open a Terminal window, set up the environment if needed, and start the server automatically.
+
+### Terminal / shell scripts
+
+Shell script equivalents are also included for running from the terminal directly:
 
 ```bash
 chmod +x Start-PrintJobSeeder.sh Stop-PrintJobSeeder.sh

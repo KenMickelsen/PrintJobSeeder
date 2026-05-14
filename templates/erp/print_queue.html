@@ -58,14 +58,6 @@
       <div class="card-body">
 
         <div class="form-group">
-          <label class="form-label">Destination</label>
-          <select class="form-control" id="bulk-destination">
-            <option value="cloud_link">Cloud Link</option>
-            <option value="on_premise">On-Premise</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label class="form-label">Industry</label>
           <select class="form-control" id="bulk-industry">
             {% for ind in industries %}
@@ -77,10 +69,10 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Printer</label>
-          <select class="form-control" id="bulk-printer">
-            <option value="">Select a printer...</option>
-          </select>
+          <label class="form-label">Printers</label>
+          <p class="text-muted" style="font-size:12px; margin:4px 0 0;">
+            All printers in the selected industry folder will be used automatically (round-robin).
+          </p>
         </div>
 
         <div class="two-col" style="gap:12px;">
@@ -89,7 +81,7 @@
             <input type="number" class="form-control" id="bulk-num-jobs" value="10" min="1" max="500" />
           </div>
           <div class="form-group">
-            <label class="form-label">Timing</label>
+            <label class="form-label">Timing Mode</label>
             <select class="form-control" id="bulk-timing">
               <option value="random">Random</option>
               <option value="fixed">Fixed</option>
@@ -100,6 +92,19 @@
         <div id="fixed-delay-row" class="form-group" style="display:none;">
           <label class="form-label">Fixed Delay (seconds)</label>
           <input type="number" class="form-control" id="bulk-fixed-delay" value="2" min="0.1" step="0.1" />
+        </div>
+
+        <div id="random-delay-row" style="display:block;">
+          <div class="two-col" style="gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Min Delay (seconds)</label>
+              <input type="number" class="form-control" id="bulk-min-delay" value="0.5" min="0.1" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max Delay (seconds)</label>
+              <input type="number" class="form-control" id="bulk-max-delay" value="30" min="1" step="1" />
+            </div>
+          </div>
         </div>
 
         <div class="flex gap-2 mt-2">
@@ -187,23 +192,20 @@ async function loadPrinters(selectId, industry) {
 }
 
 loadPrinters('single-printer', 'manufacturing');
-loadPrinters('bulk-printer', 'manufacturing');
 
 document.getElementById('single-printer').addEventListener('change', function() {
   if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
 });
-document.getElementById('bulk-printer').addEventListener('change', function() {
-  if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
-});
 
 document.getElementById('bulk-industry').addEventListener('change', () => {
-  loadPrinters('bulk-printer', document.getElementById('bulk-industry').value);
+  // no printer reload needed — backend fetches automatically
 });
 
 // ── Timing toggle ────────────────────────────────────────
 document.getElementById('bulk-timing').addEventListener('change', function() {
-  document.getElementById('fixed-delay-row').style.display =
-    this.value === 'fixed' ? 'block' : 'none';
+  const isFixed = this.value === 'fixed';
+  document.getElementById('fixed-delay-row').style.display = isFixed ? 'block' : 'none';
+  document.getElementById('random-delay-row').style.display = isFixed ? 'none' : 'block';
 });
 
 // ── Single job send ──────────────────────────────────────
@@ -246,14 +248,12 @@ function appendLog(msg, cls = 'log-info') {
 
 // ── Bulk run ─────────────────────────────────────────────
 document.getElementById('bulk-start-btn').addEventListener('click', async () => {
-  const printer  = document.getElementById('bulk-printer').value;
   const industry = document.getElementById('bulk-industry').value;
   const numJobs  = parseInt(document.getElementById('bulk-num-jobs').value, 10) || 10;
   const timing   = document.getElementById('bulk-timing').value;
   const fixedDel = parseFloat(document.getElementById('bulk-fixed-delay').value) || 2;
-  const dest     = document.getElementById('bulk-destination').value;
-
-  if (!printer) { showToast('Select a printer.', 'error'); return; }
+  const minDel   = parseFloat(document.getElementById('bulk-min-delay').value) || 0.5;
+  const maxDel   = parseFloat(document.getElementById('bulk-max-delay').value) || 30;
 
   document.getElementById('bulk-progress-area').style.display = 'block';
   document.getElementById('bulk-bar').style.width = '0%';
@@ -268,12 +268,16 @@ document.getElementById('bulk-start-btn').addEventListener('click', async () => 
   form.append('num_jobs', numJobs);
   form.append('timing_mode', timing);
   form.append('fixed_delay', fixedDel);
-  form.append('printer', printer);
+  form.append('min_delay', minDel);
+  form.append('max_delay', maxDel);
 
   try {
     const r = await fetch('/api/erp/start-print-run', { method: 'POST', body: form });
     const d = await r.json();
     if (!d.success) { showToast(d.error || 'Failed to start.', 'error'); resetBulkUI(); return; }
+    if (d.printer_count) {
+      document.getElementById('bulk-status-label').textContent = `Running across ${d.printer_count} printer(s)...`;
+    }
     bulkSession = d.session_id;
     streamResults(bulkSession, numJobs);
   } catch(e) {
