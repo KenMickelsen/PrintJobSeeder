@@ -21,8 +21,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if virtual environment exists, create if not
-if not exist "venv" (
+REM Check if virtual environment exists and is valid, create if not
+if not exist "venv\Scripts\activate.bat" (
     echo Creating virtual environment...
     python -m venv venv
     if errorlevel 1 (
@@ -42,7 +42,7 @@ REM Check if dependencies are installed
 python -c "import flask; import requests; import requests_toolbelt; import reportlab" >nul 2>&1
 if errorlevel 1 (
     echo Installing dependencies...
-    pip install -r requirements.txt
+    python -m pip install -r requirements.txt
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies.
         pause
