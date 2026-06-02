@@ -1,0 +1,225 @@
+{% extends "erp/base.html" %}
+
+{% block title %}Customers{% endblock %}
+{% block breadcrumb %}Customers{% endblock %}
+
+{% block content %}
+<div class="page-title">Customers</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Active Accounts ({{ customers|length }})</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Company</th>
+        <th>Primary Contact</th>
+        <th>Location</th>
+        <th>Active Orders</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for name, city, contact in customers %}
+      {% set orders = customer_orders.get(name, []) %}
+      <tr>
+        <td class="text-muted" style="width:40px;">{{ loop.index }}</td>
+        <td><strong>{{ name }}</strong></td>
+        <td>{{ contact }}</td>
+        <td class="text-muted">{{ city }}</td>
+        <td>
+          {% set count = loop.index % 5 %}
+          {% if count == 0 %}
+            <span class="badge badge-open">{{ loop.index % 4 + 1 }} orders</span>
+          {% elif count < 3 %}
+            <span class="badge badge-progress">{{ loop.index % 3 + 1 }} orders</span>
+          {% else %}
+            <span class="badge badge-complete">{{ loop.index % 2 + 1 }} orders</span>
+          {% endif %}
+        </td>
+        <td>
+          <button class="btn btn-secondary btn-sm print-customer-btn"
+                  data-customer="{{ name }}"
+                  data-orders="{{ orders | tojson | e }}"
+                  data-count="{{ orders | length }}">
+            Print Orders{% if orders %} ({{ orders | length }}){% endif %}
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Print Modal -->
+<div class="modal-backdrop" id="customer-print-modal">
+  <div class="modal" style="width:440px;">
+    <div class="modal-header">
+      <span class="modal-title">Print Customer Orders</span>
+      <button class="modal-close" id="close-customer-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
+        Printing <strong id="modal-order-count"></strong> order(s) for <strong id="modal-customer-name"></strong>
+      </p>
+      <div class="form-group">
+        <label class="form-label">Printer</label>
+        <select class="form-control" id="customer-printer-select">
+          <option value="">Loading printers...</option>
+        </select>
+      </div>
+      <div id="customer-print-progress" style="display:none; margin-top:12px;">
+        <div class="flex justify-between items-center" style="margin-bottom:6px;">
+          <span style="font-size:13px;" id="customer-progress-label">Sending...</span>
+          <span class="text-muted" style="font-size:12px;" id="customer-progress-count">0 / 0</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="customer-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-customer-btn">Cancel</button>
+      <button class="btn btn-primary" id="confirm-customer-btn">Print</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let printersCache = [];
+let pendingCustomerOrders = [];
+let activeCustomerSession = null;
+
+// ── Load printers ─────────────────────────────────────────
+async function loadPrinters(selectEl) {
+  if (printersCache.length) { populatePrinterSelect(selectEl, printersCache); return; }
+  selectEl.innerHTML = '<option value="">Loading...</option>';
+  try {
+    const r = await fetch('/api/erp/printers?industry=manufacturing');
+    const d = await r.json();
+    if (d.success && d.printers.length) {
+      printersCache = d.printers;
+      populatePrinterSelect(selectEl, printersCache);
+    } else {
+      selectEl.innerHTML = '<option value="">No printers found — check Admin settings</option>';
+    }
+  } catch(e) {
+    selectEl.innerHTML = '<option value="">Error loading printers</option>';
+  }
+}
+
+function populatePrinterSelect(selectEl, printers) {
+  selectEl.innerHTML = '<option value="">Select a printer...</option>' +
+    printers.map(p => `<option value="${p}">${p}</option>`).join('');
+  const saved = localStorage.getItem('pjs_lastPrinter');
+  if (saved && [...selectEl.options].some(o => o.value === saved)) selectEl.value = saved;
+}
+
+// ── Open modal ────────────────────────────────────────────
+document.querySelectorAll('.print-customer-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const customer = btn.dataset.customer;
+    const count = parseInt(btn.dataset.count, 10) || 1;
+    pendingCustomerOrders = JSON.parse(btn.dataset.orders || '[]');
+    if (!pendingCustomerOrders.length) {
+      // No WOs on record — still send 1 generic manufacturing job
+      pendingCustomerOrders = ['GENERIC'];
+    }
+    document.getElementById('modal-customer-name').textContent = customer;
+    document.getElementById('modal-order-count').textContent = pendingCustomerOrders.length;
+    document.getElementById('customer-print-progress').style.display = 'none';
+    document.getElementById('confirm-customer-btn').disabled = false;
+    document.getElementById('confirm-customer-btn').textContent = 'Print';
+    document.getElementById('cancel-customer-btn').textContent = 'Cancel';
+    document.getElementById('customer-print-modal').classList.add('open');
+    loadPrinters(document.getElementById('customer-printer-select'));
+  });
+});
+
+document.getElementById('close-customer-modal').addEventListener('click', closeModal);
+document.getElementById('cancel-customer-btn').addEventListener('click', () => {
+  if (activeCustomerSession) {
+    fetch(`/api/erp/stop-jobs/${activeCustomerSession}`, { method: 'POST' });
+    activeCustomerSession = null;
+  }
+  closeModal();
+});
+
+function closeModal() {
+  document.getElementById('customer-print-modal').classList.remove('open');
+}
+
+document.getElementById('customer-printer-select').addEventListener('change', function() {
+  if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
+});
+
+// ── Confirm print ─────────────────────────────────────────
+document.getElementById('confirm-customer-btn').addEventListener('click', async () => {
+  const printer = document.getElementById('customer-printer-select').value;
+  if (!printer) { showToast('Please select a printer.', 'error'); return; }
+
+  const numJobs = pendingCustomerOrders.length;
+  document.getElementById('customer-print-progress').style.display = 'block';
+  document.getElementById('confirm-customer-btn').disabled = true;
+  document.getElementById('confirm-customer-btn').textContent = 'Printing...';
+  document.getElementById('cancel-customer-btn').textContent = 'Stop';
+  document.getElementById('customer-progress-label').textContent = `Sending ${numJobs} job(s)...`;
+  document.getElementById('customer-progress-count').textContent = `0 / ${numJobs}`;
+  document.getElementById('customer-progress-fill').style.width = '0%';
+
+  localStorage.setItem('pjs_lastPrinter', printer);
+
+  const form = new FormData();
+  form.append('industry', 'manufacturing');
+  form.append('num_jobs', numJobs);
+  form.append('timing_mode', 'fixed');
+  form.append('fixed_delay', '1');
+  form.append('printer', printer);
+
+  try {
+    const r = await fetch('/api/erp/start-print-run', { method: 'POST', body: form });
+    const d = await r.json();
+    if (!d.success) { showToast(d.error || 'Failed to start.', 'error'); resetConfirmBtn(); return; }
+    activeCustomerSession = d.session_id;
+    streamProgress(d.session_id, numJobs);
+  } catch(e) {
+    showToast('Network error.', 'error');
+    resetConfirmBtn();
+  }
+});
+
+function resetConfirmBtn() {
+  document.getElementById('confirm-customer-btn').disabled = false;
+  document.getElementById('confirm-customer-btn').textContent = 'Print';
+  document.getElementById('cancel-customer-btn').textContent = 'Cancel';
+}
+
+function streamProgress(sessionId, total) {
+  let done = 0;
+  const es = new EventSource(`/api/erp/stream-jobs/${sessionId}`);
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'complete') {
+      es.close();
+      activeCustomerSession = null;
+      document.getElementById('customer-progress-label').textContent =
+        `Done — ${data.success}/${data.total} sent`;
+      document.getElementById('cancel-customer-btn').textContent = 'Close';
+      document.getElementById('confirm-customer-btn').disabled = false;
+      document.getElementById('confirm-customer-btn').textContent = 'Print Again';
+      showToast(`Printed ${data.success} order(s) successfully.`, 'success');
+      return;
+    }
+    done++;
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('customer-progress-fill').style.width = pct + '%';
+    document.getElementById('customer-progress-count').textContent = `${done} / ${total}`;
+  };
+  es.onerror = () => { es.close(); resetConfirmBtn(); };
+}
+</script>
+{% endblock %}

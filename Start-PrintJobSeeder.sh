@@ -39,11 +39,10 @@ fi
 echo "Activating virtual environment..."
 source venv/bin/activate
 
-# Check if dependencies are installed
-python3 -c "import flask; import requests; import requests_toolbelt; import reportlab" &>/dev/null
-if [ $? -ne 0 ]; then
+# Check if dependencies are installed (use venv's python, not system)
+if ! python3 -c "import flask; import requests; import requests_toolbelt; import reportlab" &>/dev/null; then
     echo "Installing dependencies..."
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install dependencies."
         exit 1

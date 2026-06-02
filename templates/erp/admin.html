@@ -1,0 +1,188 @@
+{% extends "erp/base.html" %}
+
+{% block title %}Admin{% endblock %}
+{% block breadcrumb %}Admin{% endblock %}
+
+{% block content %}
+<div class="page-title">System Administration</div>
+
+<form id="admin-form">
+
+  <!-- Active Destination -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <span class="card-title">Active Print Destination</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
+        Select which destination is used when printing orders and running print jobs.
+      </p>
+      <div class="flex gap-3">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+          <input type="radio" name="destination" id="dest-cloud" value="cloud_link"
+            {% if settings.destination == 'cloud_link' %}checked{% endif %} />
+          Cloud Link
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+          <input type="radio" name="destination" id="dest-onprem" value="on_premise"
+            {% if settings.destination == 'on_premise' %}checked{% endif %} />
+          On-Premise
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cloud Link -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <span class="card-title">Cloud Link</span>
+    </div>
+    <div class="card-body">
+      <div class="two-col">
+        <div class="form-group">
+          <label class="form-label">Region</label>
+          <select class="form-control" id="cl-region" name="cl_region">
+            <option value="">Select region...</option>
+            {% for r in cloud_regions %}
+            <option value="{{ r }}" {% if settings.cloud_link.region == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input type="password" class="form-control" id="cl-api-key" name="cl_api_key"
+                 placeholder="{% if settings.cloud_link.has_api_key %}(saved — enter to replace){% else %}Enter API key{% endif %}" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- On-Premise -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <span class="card-title">On-Premise Server</span>
+    </div>
+    <div class="card-body">
+      <div class="two-col">
+        <div class="form-group">
+          <label class="form-label">Server Hostname / IP</label>
+          <input type="text" class="form-control" id="op-server" name="op_server"
+                 value="{{ settings.on_premise.server }}" placeholder="e.g. printserver.local" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Protocol</label>
+          <select class="form-control" id="op-protocol" name="op_protocol">
+            <option value="https" {% if settings.on_premise.protocol == 'https' %}selected{% endif %}>HTTPS</option>
+            <option value="http"  {% if settings.on_premise.protocol == 'http'  %}selected{% endif %}>HTTP</option>
+          </select>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="form-group">
+          <label class="form-label">Port</label>
+          <input type="text" class="form-control" id="op-port" name="op_port"
+                 value="{{ settings.on_premise.port }}" placeholder="443" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bearer Token</label>
+          <input type="password" class="form-control" id="op-token" name="op_token"
+                 placeholder="{% if settings.on_premise.has_token %}(saved — enter to replace){% else %}Enter bearer token{% endif %}" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Industry Printer Paths -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <span class="card-title">Industry Printer Path Filters</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
+        Wildcard filter used to query printers from the Vasion API for each industry.
+      </p>
+      <div class="two-col">
+        {% for ind in industries %}
+        <div class="form-group">
+          <label class="form-label">{{ ind | capitalize }}</label>
+          <input type="text" class="form-control"
+                 id="path-{{ ind }}" name="path_{{ ind }}"
+                 value="{{ settings.industry_paths.get(ind, '*' + ind.title() + '*') }}" />
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-2">
+    <button type="submit" class="btn btn-primary">Save Settings</button>
+    <button type="button" class="btn btn-secondary" id="test-cloud-btn">Test Cloud Connection</button>
+  </div>
+
+</form>
+
+<div id="save-result" class="mt-4" style="font-size:13px;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('admin-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const payload = {
+    destination: document.querySelector('input[name="destination"]:checked')?.value || 'cloud_link',
+    cloud_link: {
+      region: document.getElementById('cl-region').value,
+    },
+    on_premise: {
+      server:   document.getElementById('op-server').value,
+      protocol: document.getElementById('op-protocol').value,
+      port:     document.getElementById('op-port').value,
+    },
+    industry_paths: {}
+  };
+
+  const apiKey = document.getElementById('cl-api-key').value;
+  if (apiKey) payload.cloud_link.api_key = apiKey;
+
+  const token = document.getElementById('op-token').value;
+  if (token) payload.on_premise.bearer_token = token;
+
+  {% for ind in industries %}
+  payload.industry_paths['{{ ind }}'] = document.getElementById('path-{{ ind }}').value;
+  {% endfor %}
+
+  const r = await fetch('/api/erp/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const d = await r.json();
+  const resultEl = document.getElementById('save-result');
+  if (d.success) {
+    showToast('Settings saved.', 'success');
+    resultEl.innerHTML = '<span class="text-success">Settings saved successfully.</span>';
+  } else {
+    showToast('Failed to save settings.', 'error');
+    resultEl.innerHTML = `<span class="text-danger">Error: ${d.error}</span>`;
+  }
+});
+
+document.getElementById('test-cloud-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('save-result');
+  resultEl.textContent = 'Testing connection...';
+  try {
+    const r = await fetch('/api/erp/printers?industry=manufacturing');
+    const d = await r.json();
+    if (d.success) {
+      resultEl.innerHTML = `<span class="text-success">Connection OK — ${d.printers.length} printer(s) found.</span>`;
+      showToast(`Found ${d.printers.length} printers.`, 'success');
+    } else {
+      resultEl.innerHTML = `<span class="text-danger">Connection failed: ${d.error}</span>`;
+      showToast('Connection failed.', 'error');
+    }
+  } catch(e) {
+    resultEl.innerHTML = '<span class="text-danger">Network error.</span>';
+  }
+});
+</script>
+{% endblock %}
