@@ -26,18 +26,57 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # File paths
 # ---------------------------------------------------------------------------
-LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'request_log.txt')
-SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
+def _base_dir():
+    """Return the directory for writable data files (settings, logs).
+
+    When frozen by PyInstaller:
+    - Windows: write next to the .exe (same folder, easy to locate).
+    - macOS:   the executable lives inside a .app bundle which may be in a
+               read-only location (e.g. /Applications), so write to the
+               standard macOS user data directory instead:
+               ~/Library/Application Support/PrinterLogicOutputDemo/
+    In normal (source) runs, use this module's folder.
+    """
+    if getattr(sys, 'frozen', False):
+        if sys.platform == 'darwin':
+            data_dir = os.path.join(
+                os.path.expanduser('~'), 'Library', 'Application Support',
+                'PrinterLogicOutputDemo'
+            )
+            os.makedirs(data_dir, exist_ok=True)
+            return data_dir
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = _base_dir()
+LOG_FILE = os.path.join(BASE_DIR, 'request_log.txt')
+SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
+
+
+def resource_path(relative):
+    """Resolve a path to a bundled read-only resource (e.g. templates).
+
+    When frozen by PyInstaller, bundled data files live under ``sys._MEIPASS``.
+    In source runs, resolve relative to this module's folder.
+    """
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative)
 
 
 def log(message):
-    """Write a timestamped message to the log file and stderr."""
+    """Write a timestamped message to the log file and stderr.
+
+    stderr is suppressed on macOS when running as a windowed .app bundle
+    (PyInstaller --windowed), so guard against it being None.
+    """
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
     line = f"[{timestamp}] {message}"
     with open(LOG_FILE, 'a', encoding='utf-8') as f:
         f.write(line + '\n')
-    sys.stderr.write(line + '\n')
-    sys.stderr.flush()
+    if sys.stderr is not None:
+        sys.stderr.write(line + '\n')
+        sys.stderr.flush()
 
 
 # ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ from flask import Flask, render_template, request, jsonify, Response
 from werkzeug.utils import secure_filename
 
 from print_utils import (
-    log, LOG_FILE, SETTINGS_FILE,
+    log, LOG_FILE, SETTINGS_FILE, resource_path,
     CLOUD_REGIONS, INDUSTRIES, INDUSTRY_DISPLAY_NAMES,
     INDUSTRY_PRESETS, USERNAME_PRESETS, INDUSTRY_CONTENT, LOREM_IPSUM,
     get_default_settings, load_settings, save_settings,
@@ -35,7 +35,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=resource_path('templates'))
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size (multiple industry uploads)
 app.config['UPLOAD_FOLDER'] = tempfile.mkdtemp()
 
@@ -866,6 +866,26 @@ def get_results():
     return jsonify(job_results)
 
 
+def run_server(open_browser=False):
+    """Start the Print Job Seeder web server on port 5757.
+
+    Args:
+        open_browser: If True, open the default browser to the app after a
+            short delay. The launcher opens browsers itself, so this defaults
+            to False when invoked from the bundled launcher.
+    """
+    if open_browser:
+        def _open():
+            time.sleep(1.5)  # Wait for server to start
+            webbrowser.open('http://localhost:5757')
+        threading.Thread(target=_open, daemon=True).start()
+
+    # threaded=True is required so SSE streaming responses don't block other
+    # requests; use_reloader=False so this works when run from a thread.
+    app.run(debug=False, host='localhost', port=5757,
+            threaded=True, use_reloader=False)
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("Print Job Seeder")
@@ -873,13 +893,5 @@ if __name__ == '__main__':
     print("Starting server at http://localhost:5757")
     print("Press Ctrl+C to stop the server")
     print("=" * 50)
-    
-    # Open browser automatically
-    
-    def open_browser():
-        time.sleep(1.5)  # Wait for server to start
-        webbrowser.open('http://localhost:5757')
-    
-    threading.Thread(target=open_browser, daemon=True).start()
-    
-    app.run(debug=False, host='localhost', port=5757)
+
+    run_server(open_browser=True)
