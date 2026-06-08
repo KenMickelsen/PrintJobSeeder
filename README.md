@@ -27,6 +27,17 @@ A polished, customer-facing fake manufacturing ERP system that wraps the same pr
 
 Runs at **http://localhost:5758**
 
+### 🖧 Virtual Printer (JetDirect)
+
+A lightweight TCP server that listens on port 9100 and acts as a virtual JetDirect printer. It accepts raw print data sent by Vasion's local output or internal routing service, discards the bytes, and closes the connection cleanly — which is the success signal for the JetDirect/AppSocket (raw port 9100) protocol. The output service considers the job delivered and marks it successful.
+
+**This is not connected to the Print Job Seeder or ERP Demo** — it is a standalone listener. Its purpose is to give demos a reachable local print target so you can configure printers in your Vasion instance with a `127.0.0.1` address and have jobs delivered successfully when your local output or routing service is running on the same machine.
+
+- No response bytes are sent; a clean TCP close is sufficient for JetDirect success
+- Listens on **127.0.0.1:9100** — reachable by any local service on the same machine
+- Logs each completed job (source, byte count) in a live in-app log window
+- Can run alongside either or both of the other utilities
+
 > 💡 Both apps can run simultaneously — they use separate ports and share the same `settings.json`.
 
 ---
@@ -54,7 +65,16 @@ To stop: double-click **`Stop-PrintJobSeeder.bat`**
 
 To stop: double-click **`Stop-ERPDemo.bat`**
 
-### Script Reference
+### Virtual Printer
+
+The Virtual Printer is managed from the launcher window (`.exe`) — there is no separate start/stop script. Check the **Virtual Printer (JetDirect)** checkbox before clicking **Launch**, then click **View Logs** in the status panel to watch incoming jobs.
+
+Once running, configure a printer in your Vasion instance with:
+- **IP address:** `127.0.0.1`
+- **Port:** `9100`
+- **Protocol:** Raw / JetDirect / AppSocket
+
+When your local Vasion output or internal routing service delivers a job to that printer, it will connect to the virtual printer, the job will be accepted and discarded, and Vasion will record it as successfully printed.
 
 | Script | Purpose |
 |--------|---------|
@@ -106,6 +126,22 @@ To stop: `./Stop-ERPDemo.sh`
 Shell scripts run in the background via `nohup`, writing logs to `printjobseeder.log` / `erp_demo.log` and saving a `.pid` file for clean shutdown.
 
 > **Note on port 5000**: macOS Monterey and later reserves port 5000 for AirPlay Receiver. Both apps intentionally use ports 5757 and 5758 to avoid this conflict.
+
+---
+
+## Using the Virtual Printer
+
+The Virtual Printer is started from the launcher (`.exe` or `.app`) — check the **Virtual Printer (JetDirect)** checkbox and click **Launch**.
+
+Once running:
+
+1. In your Vasion instance, create or edit a printer with IP `127.0.0.1`, port `9100`, and a raw/JetDirect protocol
+2. Make sure your local Vasion output service or internal routing service is running on the same machine
+3. Submit a print job to that printer — the output service will connect to `127.0.0.1:9100` and deliver the job data
+4. The Virtual Printer accepts it, discards the bytes, and closes the connection cleanly — Vasion marks the job as successfully printed
+5. Click **View Logs** in the launcher status panel to see each completed job (timestamp, source port, bytes received)
+
+> **Why does a clean close count as success?** The JetDirect/AppSocket (raw port 9100) protocol has no response format — the client simply streams print data and waits for the server to close the connection. A normal close signals acceptance; a TCP reset (RST) signals failure. This virtual printer always closes normally.
 
 ---
 
