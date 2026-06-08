@@ -15,13 +15,40 @@ APP_REGISTRY below.
 """
 
 import socket
+import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 
 import app as seeder_app
 import app_erp as erp_app
+
+# macOS ships Helvetica Neue; Windows ships Segoe UI.  Specifying a font that
+# doesn't exist on the platform causes tkinter to fall back with rendering
+# artefacts (flashing, doubled checkboxes, etc.).
+_FONT_FAMILY = 'Helvetica Neue' if sys.platform == 'darwin' else 'Segoe UI'
+
+
+def _font(size, *modifiers):
+    """Return a tkinter font tuple for the current platform."""
+    return (_FONT_FAMILY, size) + modifiers
+
+
+def _maybe_attach_console():
+    """If --console was passed on the command line, allocate a Windows console
+    window and redirect stdout/stderr to it so server logs are visible.
+    On macOS/Linux the terminal is always available when launched from one,
+    so this is a no-op on those platforms."""
+    if '--console' not in sys.argv:
+        return
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.kernel32.AllocConsole()
+        # Re-open the standard streams so Python output reaches the new console.
+        sys.stdout = open('CONOUT$', 'w', encoding='utf-8')
+        sys.stderr = open('CONOUT$', 'w', encoding='utf-8')
+        sys.stdin  = open('CONIN$',  'r', encoding='utf-8')
 
 
 # ---------------------------------------------------------------------------
@@ -77,53 +104,64 @@ class LauncherWindow:
         root.title('PrinterLogic Output Demo Launcher')
         root.resizable(False, False)
 
-        self.container = tk.Frame(root, padx=24, pady=20)
-        self.container.pack(fill='both', expand=True)
+        outer = tk.Frame(root, padx=24, pady=20)
+        outer.pack(fill='both', expand=True)
+
+        # Two frames pre-built; only one is visible at a time (pack/pack_forget
+        # is more reliable than destroy-and-rebuild, especially on macOS).
+        self._sel_frame = tk.Frame(outer)
+        self._run_frame = tk.Frame(outer)
 
         self._build_selection_view()
+        self._build_status_frame()   # build now but don't show yet
+
+        self._sel_frame.pack(fill='both', expand=True)
 
     # -- Selection view ----------------------------------------------------
     def _build_selection_view(self):
+        f = self._sel_frame
+
         tk.Label(
-            self.container,
+            f,
             text='PrinterLogic Output Demo Launcher',
-            font=('Segoe UI', 14, 'bold'),
+            font=_font(14, 'bold'),
         ).pack(anchor='w')
 
         tk.Label(
-            self.container,
+            f,
             text='Select which apps to launch, then click Launch.',
-            font=('Segoe UI', 9),
+            font=_font(9),
             fg='#555555',
         ).pack(anchor='w', pady=(2, 14))
 
         for entry in APP_REGISTRY:
             var = tk.IntVar(value=0)
-            var.trace_add('write', lambda *_: self._update_launch_state())
             self.vars[entry['key']] = var
 
-            row = tk.Frame(self.container)
+            row = tk.Frame(f)
             row.pack(fill='x', anchor='w', pady=2)
 
-            cb = tk.Checkbutton(
+            # Use command= instead of trace_add — on macOS, traces can fire
+            # multiple times per click and cause visual doubling.
+            tk.Checkbutton(
                 row,
                 text=entry['label'],
                 variable=var,
-                font=('Segoe UI', 10),
-            )
-            cb.pack(side='left')
+                font=_font(10),
+                command=self._update_launch_state,
+            ).pack(side='left')
 
             tk.Label(
                 row,
                 text=f"— {entry['description']} (port {entry['port']})",
-                font=('Segoe UI', 8),
+                font=_font(8),
                 fg='#888888',
             ).pack(side='left', padx=(4, 0))
 
-        self.launch_btn = tk.Button(
-            self.container,
+        # ttk.Button uses native macOS/Windows rendering and doesn't flash.
+        self.launch_btn = ttk.Button(
+            f,
             text='Launch',
-            font=('Segoe UI', 10, 'bold'),
             width=14,
             state='disabled',
             command=self._on_launch,
@@ -133,6 +171,56 @@ class LauncherWindow:
     def _update_launch_state(self):
         any_selected = any(v.get() for v in self.vars.values())
         self.launch_btn.config(state='normal' if any_selected else 'disabled')
+
+    # -- Status frame (pre-built, shown after launch) ----------------------
+    def _build_status_frame(self):
+        f = self._run_frame
+
+        tk.Label(
+            f,
+            text='Running',
+            font=_font(14, 'bold'),
+        ).pack(anchor='w')
+
+        tk.Label(
+            f,
+            text='These apps are live. Keep this window open while in use.',
+            font=_font(9),
+            fg='#555555',
+        ).pack(anchor='w', pady=(2, 14))
+
+        # Placeholder frame for per-app status rows, populated on launch.
+        self._status_rows = tk.Frame(f)
+        self._status_rows.pack(fill='x')
+
+        ttk.Button(
+            f,
+            text='Quit',
+            width=14,
+            command=self._on_quit,
+        ).pack(anchor='e', pady=(16, 0))
+
+    def _populate_status_rows(self):
+        for entry in self.running:
+            row = tk.Frame(self._status_rows)
+            row.pack(fill='x', anchor='w', pady=2)
+
+            tk.Label(
+                row,
+                text=f"● {entry['label']}",
+                font=_font(10),
+                fg='#1a7f37',
+            ).pack(side='left')
+
+            link = tk.Label(
+                row,
+                text=entry['url'],
+                font=_font(9, 'underline'),
+                fg='#0969da',
+                cursor='hand2',
+            )
+            link.pack(side='left', padx=(8, 0))
+            link.bind('<Button-1>', lambda _e, url=entry['url']: self._open(url))
 
     # -- Launch ------------------------------------------------------------
     def _on_launch(self):
@@ -164,53 +252,12 @@ class LauncherWindow:
 
         threading.Thread(target=_open_browsers, daemon=True).start()
 
-        self._build_status_view()
+        self._populate_status_rows()
+        # Swap frames — no destroy/rebuild, avoids macOS repaint overlap.
+        self._sel_frame.pack_forget()
+        self._run_frame.pack(fill='both', expand=True)
 
-    # -- Status view -------------------------------------------------------
-    def _build_status_view(self):
-        for child in self.container.winfo_children():
-            child.destroy()
-
-        tk.Label(
-            self.container,
-            text='Running',
-            font=('Segoe UI', 14, 'bold'),
-        ).pack(anchor='w')
-
-        tk.Label(
-            self.container,
-            text='These apps are live. Keep this window open while in use.',
-            font=('Segoe UI', 9),
-            fg='#555555',
-        ).pack(anchor='w', pady=(2, 14))
-
-        for entry in self.running:
-            row = tk.Frame(self.container)
-            row.pack(fill='x', anchor='w', pady=2)
-            tk.Label(
-                row,
-                text=f"● {entry['label']}",
-                font=('Segoe UI', 10),
-                fg='#1a7f37',
-            ).pack(side='left')
-            link = tk.Label(
-                row,
-                text=entry['url'],
-                font=('Segoe UI', 9, 'underline'),
-                fg='#0969da',
-                cursor='hand2',
-            )
-            link.pack(side='left', padx=(8, 0))
-            link.bind('<Button-1>', lambda _e, url=entry['url']: self._open(url))
-
-        tk.Button(
-            self.container,
-            text='Quit',
-            font=('Segoe UI', 10, 'bold'),
-            width=14,
-            command=self._on_quit,
-        ).pack(anchor='e', pady=(16, 0))
-
+    # -- Helpers -----------------------------------------------------------
     @staticmethod
     def _open(url):
         import webbrowser
@@ -222,6 +269,7 @@ class LauncherWindow:
 
 
 def main():
+    _maybe_attach_console()
     root = tk.Tk()
     LauncherWindow(root)
     root.mainloop()
