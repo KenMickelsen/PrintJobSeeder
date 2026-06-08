@@ -53,7 +53,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,           # UPX corrupts bundled Tcl/Tk on macOS -> rendering glitches
     console=False,           # no terminal window — standard Mac GUI app
     disable_windowed_traceback=False,
     argv_emulation=False,    # avoid legacy Carbon argv emulation
@@ -67,7 +67,7 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,           # see note above — UPX is unsafe for the macOS Tk frameworks
     upx_exclude=[],
     name='PrinterLogic Output Demo',
 )

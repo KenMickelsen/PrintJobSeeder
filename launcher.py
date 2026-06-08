@@ -19,14 +19,17 @@ import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 import app as seeder_app
 import app_erp as erp_app
 
-# macOS ships Helvetica Neue; Windows ships Segoe UI.  Specifying a font that
-# doesn't exist on the platform causes tkinter to fall back with rendering
-# artefacts (flashing, doubled checkboxes, etc.).
+# Font family used for *labels* only.  macOS ships Helvetica Neue; Windows ships
+# Segoe UI.  Buttons and checkbuttons deliberately do NOT take a custom font:
+# on macOS, setting a font on a classic tk.Button/tk.Checkbutton forces Tk to
+# stop using the native Aqua control and draw it manually, which flickers on
+# hover and leaves "ghost" duplicate controls.  Those interactive controls use
+# ttk widgets instead, which always render through the native theme.
 _FONT_FAMILY = 'Helvetica Neue' if sys.platform == 'darwin' else 'Segoe UI'
 
 
@@ -104,6 +107,15 @@ class LauncherWindow:
         root.title('PrinterLogic Output Demo Launcher')
         root.resizable(False, False)
 
+        # Force the Tk-drawn 'clam' theme instead of the native 'aqua' theme.
+        # macOS still ships the deprecated Tk 8.5.9, whose Aqua ttk theme draws
+        # buttons/checkbuttons blank (invisible) and whose classic widgets
+        # flicker/ghost on hover.  'clam' is rendered by Tk itself, so it looks
+        # consistent and renders reliably on every Tk we might be bundled with.
+        style = ttk.Style(root)
+        if 'clam' in style.theme_names():
+            style.theme_use('clam')
+
         outer = tk.Frame(root, padx=24, pady=20)
         outer.pack(fill='both', expand=True)
 
@@ -142,12 +154,12 @@ class LauncherWindow:
             row.pack(fill='x', anchor='w', pady=2)
 
             # Use command= instead of trace_add — on macOS, traces can fire
-            # multiple times per click and cause visual doubling.
-            tk.Checkbutton(
+            # multiple times per click and cause visual doubling.  ttk.Checkbutton
+            # renders natively on Aqua (no hover flicker / doubled checkboxes).
+            ttk.Checkbutton(
                 row,
                 text=entry['label'],
                 variable=var,
-                font=_font(10),
                 command=self._update_launch_state,
             ).pack(side='left')
 
@@ -158,10 +170,9 @@ class LauncherWindow:
                 fg='#888888',
             ).pack(side='left', padx=(4, 0))
 
-        self.launch_btn = tk.Button(
+        self.launch_btn = ttk.Button(
             f,
             text='Launch',
-            font=_font(10, 'bold'),
             width=14,
             state='disabled',
             command=self._on_launch,
@@ -193,10 +204,9 @@ class LauncherWindow:
         self._status_rows = tk.Frame(f)
         self._status_rows.pack(fill='x')
 
-        tk.Button(
+        ttk.Button(
             f,
             text='Quit',
-            font=_font(10, 'bold'),
             width=14,
             command=self._on_quit,
         ).pack(anchor='e', pady=(16, 0))
