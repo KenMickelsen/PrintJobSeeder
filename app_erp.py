@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, Response
 
 from print_utils import (
-    log, CLOUD_REGIONS, INDUSTRIES,
+    log, CLOUD_REGIONS, INDUSTRIES, resource_path,
     load_settings, save_settings,
     obfuscate_key, deobfuscate_key, build_onprem_url, get_cloud_base_url,
     fetch_printers_from_api, generate_pdf, generate_random_delay,
@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder=resource_path('templates'))
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = tempfile.mkdtemp()
 
@@ -575,8 +575,25 @@ def erp_presets():
 # Run
 # ============================================================
 
+def run_server(open_browser=False):
+    """Start the Apex Industrial ERP Demo web server on port 5758.
+
+    Args:
+        open_browser: If True, open the default browser to the app after a
+            short delay. The launcher opens browsers itself, so this defaults
+            to False when invoked from the bundled launcher.
+    """
+    if open_browser:
+        threading.Timer(
+            1.5, lambda: webbrowser.open('http://localhost:5758')
+        ).start()
+
+    # threaded=True is required so SSE streaming responses don't block other
+    # requests; use_reloader=False so this works when run from a thread.
+    app.run(debug=False, host='localhost', port=5758,
+            threaded=True, use_reloader=False)
+
+
 if __name__ == '__main__':
     log("Apex Industrial ERP Demo starting on port 5758")
-    import threading as _t
-    _t.Timer(1.5, lambda: webbrowser.open('http://localhost:5758')).start()
-    app.run(debug=False, host='localhost', port=5758)
+    run_server(open_browser=True)
