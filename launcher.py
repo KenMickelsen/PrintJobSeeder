@@ -19,7 +19,7 @@ import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 
 import app as seeder_app
 import app_erp as erp_app
@@ -158,10 +158,10 @@ class LauncherWindow:
                 fg='#888888',
             ).pack(side='left', padx=(4, 0))
 
-        # ttk.Button uses native macOS/Windows rendering and doesn't flash.
-        self.launch_btn = ttk.Button(
+        self.launch_btn = tk.Button(
             f,
             text='Launch',
+            font=_font(10, 'bold'),
             width=14,
             state='disabled',
             command=self._on_launch,
@@ -193,9 +193,10 @@ class LauncherWindow:
         self._status_rows = tk.Frame(f)
         self._status_rows.pack(fill='x')
 
-        ttk.Button(
+        tk.Button(
             f,
             text='Quit',
+            font=_font(10, 'bold'),
             width=14,
             command=self._on_quit,
         ).pack(anchor='e', pady=(16, 0))
