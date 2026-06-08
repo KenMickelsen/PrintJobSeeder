@@ -14,6 +14,7 @@ Adding a future app (e.g. an EMR demo) only requires appending an entry to
 APP_REGISTRY below.
 """
 
+import queue
 import socket
 import sys
 import threading
@@ -23,6 +24,7 @@ from tkinter import messagebox, ttk
 
 import app as seeder_app
 import app_erp as erp_app
+import virtual_printer as vprinter
 
 # Font family used for *labels* only.  macOS ships Helvetica Neue; Windows ships
 # Segoe UI.  Buttons and checkbuttons deliberately do NOT take a custom font:
@@ -74,6 +76,14 @@ APP_REGISTRY = [
         'url': 'http://localhost:5758',
         'run': erp_app.run_server,
     },
+    {
+        'key': 'vprinter',
+        'label': 'Virtual Printer (JetDirect)',
+        'description': 'Accepts raw print jobs on port 9100',
+        'port': 9100,
+        'url': None,
+        'run': vprinter.run_server,
+    },
 ]
 
 
@@ -84,11 +94,14 @@ def _port_in_use(port):
         return sock.connect_ex(('127.0.0.1', port)) == 0
 
 
-def _start_app(entry):
+def _start_app(entry, extra_kwargs=None):
     """Start one app's server in a daemon thread."""
+    kwargs = {'open_browser': False}
+    if extra_kwargs:
+        kwargs.update(extra_kwargs)
     thread = threading.Thread(
         target=entry['run'],
-        kwargs={'open_browser': False},
+        kwargs=kwargs,
         daemon=True,
         name=f"server-{entry['key']}",
     )
@@ -103,6 +116,9 @@ class LauncherWindow:
         self.root = root
         self.vars = {}
         self.running = []  # entries that have been started
+        self._vprinter_log_queue = queue.Queue()
+        self._log_win  = None   # Toplevel for the virtual printer log
+        self._log_text = None   # Text widget inside that Toplevel
 
         root.title('PrinterLogic Output Demo Launcher')
         root.resizable(False, False)
@@ -128,6 +144,10 @@ class LauncherWindow:
         self._build_status_frame()   # build now but don't show yet
 
         self._sel_frame.pack(fill='both', expand=True)
+
+        # Start the periodic queue poll so virtual printer log lines are
+        # captured and displayed as soon as the log window is opened.
+        self.root.after(200, self._poll_log_queue)
 
     # -- Selection view ----------------------------------------------------
     def _build_selection_view(self):
@@ -223,15 +243,29 @@ class LauncherWindow:
                 fg='#1a7f37',
             ).pack(side='left')
 
-            link = tk.Label(
-                row,
-                text=entry['url'],
-                font=_font(9, 'underline'),
-                fg='#0969da',
-                cursor='hand2',
-            )
-            link.pack(side='left', padx=(8, 0))
-            link.bind('<Button-1>', lambda _e, url=entry['url']: self._open(url))
+            if entry.get('url'):
+                link = tk.Label(
+                    row,
+                    text=entry['url'],
+                    font=_font(9, 'underline'),
+                    fg='#0969da',
+                    cursor='hand2',
+                )
+                link.pack(side='left', padx=(8, 0))
+                link.bind('<Button-1>', lambda _e, url=entry['url']: self._open(url))
+            else:
+                tk.Label(
+                    row,
+                    text=f"  Listening on 127.0.0.1:{entry['port']}",
+                    font=_font(9),
+                    fg='#888888',
+                ).pack(side='left', padx=(8, 0))
+                ttk.Button(
+                    row,
+                    text='View Logs',
+                    width=10,
+                    command=self._show_log_window,
+                ).pack(side='left', padx=(8, 0))
 
     # -- Launch ------------------------------------------------------------
     def _on_launch(self):
@@ -250,16 +284,21 @@ class LauncherWindow:
             return
 
         for entry in selected:
-            _start_app(entry)
+            extra = {}
+            if entry['key'] == 'vprinter':
+                extra = {'log_queue': self._vprinter_log_queue}
+            _start_app(entry, extra_kwargs=extra)
             self.running.append(entry)
 
         # Stagger browser opens so the servers have a moment to come up.
+        # Entries without a URL (e.g. Virtual Printer) are skipped.
         def _open_browsers():
             import webbrowser
             time.sleep(1.5)
             for entry in self.running:
-                webbrowser.open(entry['url'])
-                time.sleep(0.4)
+                if entry.get('url'):
+                    webbrowser.open(entry['url'])
+                    time.sleep(0.4)
 
         threading.Thread(target=_open_browsers, daemon=True).start()
 
@@ -273,6 +312,70 @@ class LauncherWindow:
     def _open(url):
         import webbrowser
         webbrowser.open(url)
+
+    def _show_log_window(self):
+        """Open (or raise) the virtual printer connection log window."""
+        if self._log_win is not None and self._log_win.winfo_exists():
+            self._log_win.deiconify()
+            self._log_win.lift()
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title('Virtual Printer — Connection Log')
+        win.geometry('600x300')
+        # Hide instead of destroy on close so the window can be re-opened
+        # and the log history is preserved.
+        win.protocol('WM_DELETE_WINDOW', win.withdraw)
+        self._log_win = win
+
+        txt = tk.Text(
+            win,
+            state='disabled',
+            wrap='none',
+            font=(_FONT_FAMILY, 9),
+            bg='#1e1e1e',
+            fg='#d4d4d4',
+            relief='flat',
+            padx=8,
+            pady=6,
+        )
+        sb = tk.Scrollbar(win, command=txt.yview)
+        txt.configure(yscrollcommand=sb.set)
+        sb.pack(side='right', fill='y')
+        txt.pack(side='top', fill='both', expand=True)
+        self._log_text = txt
+
+        btn_row = tk.Frame(win, padx=8, pady=4)
+        btn_row.pack(fill='x')
+        ttk.Button(
+            btn_row, text='Clear', width=8, command=self._clear_log
+        ).pack(side='right')
+        tk.Label(
+            btn_row,
+            text='Each line = one completed print job received on port 9100.',
+            font=_font(8),
+            fg='#888888',
+        ).pack(side='left')
+
+    def _clear_log(self):
+        if self._log_text is not None:
+            self._log_text.config(state='normal')
+            self._log_text.delete('1.0', 'end')
+            self._log_text.config(state='disabled')
+
+    def _poll_log_queue(self):
+        """Drain the virtual printer queue and append lines to the log window."""
+        try:
+            while True:
+                line = self._vprinter_log_queue.get_nowait()
+                if self._log_text is not None and self._log_text.winfo_exists():
+                    self._log_text.config(state='normal')
+                    self._log_text.insert('end', line + '\n')
+                    self._log_text.see('end')
+                    self._log_text.config(state='disabled')
+        except queue.Empty:
+            pass
+        self.root.after(200, self._poll_log_queue)
 
     def _on_quit(self):
         # Servers run as daemon threads, so they exit when the process exits.
