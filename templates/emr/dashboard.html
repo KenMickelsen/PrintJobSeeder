@@ -1,0 +1,260 @@
+{% extends "emr/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-title">Clinical Dashboard</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Active Patients</div>
+    <div class="kpi-value">{{ dashboard.kpis.active_patients }}</div>
+    <div class="kpi-sub">In current census</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Open Encounters</div>
+    <div class="kpi-value">{{ dashboard.kpis.open_encounters }}</div>
+    <div class="kpi-sub">Scheduled &amp; in progress</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Avg Wait Time</div>
+    <div class="kpi-value">{{ dashboard.kpis.avg_wait }}<span style="font-size:16px;"> min</span></div>
+    <div class="kpi-sub">Last 30 days</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Documents Printed Today</div>
+    <div class="kpi-value">{{ dashboard.kpis.docs_today }}</div>
+    <div class="kpi-sub">Via Vasion Output</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="two-col" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Encounters Over Time (30 Days)</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap">
+        <canvas id="encChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Document Print Volume (30 Days)</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap">
+        <canvas id="printChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Recent Activity</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Reference</th>
+        <th>Status</th>
+        <th>Provider</th>
+        <th>Time</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in dashboard.recent_activity %}
+      <tr>
+        <td class="text-muted">{{ item.type }}</td>
+        <td><strong>{{ item.ref }}</strong></td>
+        <td><span id="badge-{{ loop.index }}"></span></td>
+        <td>{{ item.user }}</td>
+        <td class="text-muted">{{ item.time }}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm dash-print-btn" data-id="{{ item.ref }}" data-type="{{ item.type }}">Print</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Print Modal -->
+<div class="modal-backdrop" id="dash-print-modal">
+  <div class="modal" style="width:400px;">
+    <div class="modal-header">
+      <span class="modal-title" id="dash-modal-title">Print Document</span>
+      <button class="modal-close" id="close-dash-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
+        Printing <span id="dash-doc-type"></span> <strong id="dash-order-id"></strong>
+      </p>
+      <div class="form-group">
+        <label class="form-label">Printer</label>
+        <select class="form-control" id="dash-printer-select">
+          <option value="">Loading printers...</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-dash-btn">Cancel</button>
+      <button class="btn btn-primary" id="confirm-dash-btn">Print</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Render status badges
+{% for item in dashboard.recent_activity %}
+document.getElementById('badge-{{ loop.index }}').innerHTML = statusBadge('{{ item.status }}');
+{% endfor %}
+
+const labels = {{ dashboard.chart_labels | tojson }};
+const encCounts = {{ dashboard.enc_counts | tojson }};
+const printCounts = {{ dashboard.print_counts | tojson }};
+
+// Encounters bar chart
+new Chart(document.getElementById('encChart'), {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Encounters',
+      data: encCounts,
+      backgroundColor: 'rgba(12,133,153,0.7)',
+      borderRadius: 3,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { maxTicksLimit: 10, font: { size: 10 } }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// Print volume line chart
+new Chart(document.getElementById('printChart'), {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Documents Printed',
+      data: printCounts,
+      borderColor: '#1a8a4a',
+      backgroundColor: 'rgba(26,138,74,0.1)',
+      tension: 0.3,
+      fill: true,
+      pointRadius: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { maxTicksLimit: 10, font: { size: 10 } }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+</script>
+
+<script>
+// ── Dashboard print buttons ───────────────────────────────
+let dashPrintersCache = [];
+let pendingDashId = null;
+
+async function loadDashPrinters(selectEl) {
+  if (dashPrintersCache.length) { populateDashPrinters(selectEl); return; }
+  selectEl.innerHTML = '<option value="">Loading...</option>';
+  try {
+    const r = await fetch('/api/emr/printers');
+    const d = await r.json();
+    if (d.success && d.printers.length) {
+      dashPrintersCache = d.printers;
+      populateDashPrinters(selectEl);
+    } else {
+      selectEl.innerHTML = '<option value="">No printers found — check Admin settings</option>';
+    }
+  } catch(e) {
+    selectEl.innerHTML = '<option value="">Error loading printers</option>';
+  }
+}
+
+function populateDashPrinters(selectEl) {
+  selectEl.innerHTML = '<option value="">Select a printer...</option>' +
+    dashPrintersCache.map(p => `<option value="${p}">${p}</option>`).join('');
+  const saved = localStorage.getItem('pjs_lastPrinter');
+  if (saved && [...selectEl.options].some(o => o.value === saved)) selectEl.value = saved;
+}
+
+document.querySelectorAll('.dash-print-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pendingDashId = btn.dataset.id;
+    const docType = btn.dataset.type || 'Encounter';
+    document.getElementById('dash-modal-title').textContent = `Print ${docType}`;
+    document.getElementById('dash-doc-type').textContent = docType.toLowerCase();
+    document.getElementById('dash-order-id').textContent = pendingDashId;
+    document.getElementById('confirm-dash-btn').disabled = false;
+    document.getElementById('confirm-dash-btn').textContent = 'Print';
+    document.getElementById('dash-print-modal').classList.add('open');
+    loadDashPrinters(document.getElementById('dash-printer-select'));
+  });
+});
+
+document.getElementById('close-dash-modal').addEventListener('click', () =>
+  document.getElementById('dash-print-modal').classList.remove('open'));
+document.getElementById('cancel-dash-btn').addEventListener('click', () =>
+  document.getElementById('dash-print-modal').classList.remove('open'));
+
+document.getElementById('dash-printer-select').addEventListener('change', function() {
+  if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
+});
+
+document.getElementById('confirm-dash-btn').addEventListener('click', async () => {
+  const printer = document.getElementById('dash-printer-select').value;
+  if (!printer) { showToast('Please select a printer.', 'error'); return; }
+
+  document.getElementById('confirm-dash-btn').disabled = true;
+  document.getElementById('confirm-dash-btn').textContent = 'Sending...';
+  localStorage.setItem('pjs_lastPrinter', printer);
+
+  try {
+    const r = await fetch('/api/emr/print-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: pendingDashId, printer })
+    });
+    const d = await r.json();
+    document.getElementById('dash-print-modal').classList.remove('open');
+    if (d.success) {
+      showToast(`${pendingDashId} sent to printer successfully.`, 'success');
+    } else {
+      showToast(`Print failed: ${d.message}`, 'error');
+    }
+  } catch(e) {
+    showToast('Network error.', 'error');
+  } finally {
+    document.getElementById('confirm-dash-btn').disabled = false;
+    document.getElementById('confirm-dash-btn').textContent = 'Print';
+  }
+});
+</script>
+{% endblock %}
