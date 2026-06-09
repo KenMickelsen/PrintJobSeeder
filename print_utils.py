@@ -924,17 +924,26 @@ def generate_pdf(filename, industry, min_pages=1, max_pages=15):
 # ---------------------------------------------------------------------------
 
 def generate_random_delay(timing_mode, fixed_delay=1.0, min_delay=0.5, max_delay=120.0):
-    """Return a delay in seconds based on timing_mode ('fixed' or 'random')."""
+    """Return a delay in seconds based on timing_mode ('fixed' or 'random').
+
+    For 'random' mode the delay is drawn from one of three weighted tiers, but
+    every tier is clamped to [min_delay, max_delay] so the result never exceeds
+    the configured maximum.
+    """
     if timing_mode == 'fixed':
         return fixed_delay
     elif timing_mode == 'random':
         rand = random.random()
         if rand < 0.5:
-            return random.uniform(0.5, 3.0)
+            # Quick succession — 50 % of jobs
+            raw = random.uniform(min_delay, min(3.0, max_delay))
         elif rand < 0.8:
-            return random.uniform(3.0, 30.0)
+            # Normal work rhythm — 30 % of jobs
+            raw = random.uniform(min(3.0, max_delay), min(30.0, max_delay))
         else:
-            return random.uniform(30.0, min(max_delay, 180.0))
+            # Longer pause — 20 % of jobs
+            raw = random.uniform(min(30.0, max_delay), max_delay)
+        return max(min_delay, min(raw, max_delay))
     return 1.0
 
 
