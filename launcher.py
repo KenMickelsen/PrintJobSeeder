@@ -1,24 +1,14 @@
-"""
+﻿"""
 launcher.py — Unified launcher for the Vasion print demo apps.
 
-Serves a small **browser-based** control panel so the user can choose which
-apps to start: Print Job Seeder, the Apex Industrial ERP Demo, the Virtual
-Printer, or any combination.  At least one app must be selected before
-launching.  Each selected app runs in its own daemon thread inside this single
-process, and its browser tab is opened automatically.  After launching, the
-control panel shows live status, links, and (for the Virtual Printer) a live
-connection log, plus a Quit button that stops everything.
+On **Windows** (and Linux) a native Tkinter window is used — checkboxes to
+select apps, a Launch button, and a status view with clickable links.
+On **macOS** the system Tcl/Tk 8.5.9 panics in TkpInit under recent OS
+versions, so a small browser-based control panel is served instead (Flask,
+port 5750).  Both paths share the same APP_REGISTRY, port helpers, and
+thread-start logic below.
 
-This module is the entry point packaged into the standalone .exe / .app.
-
-Why a web UI instead of Tkinter?  The macOS build can only fall back to the
-deprecated system Tcl/Tk 8.5.9, which panics in TkpInit and aborts on launch
-under recent macOS.  Serving the launcher as a tiny local web page removes the
-Tk dependency entirely, so the app starts reliably on any machine and reuses
-the same Flask stack the demos already run on.
-
-Adding a future app (e.g. an EMR demo) only requires appending an entry to
-APP_REGISTRY below.
+Adding a future app only requires appending an entry to APP_REGISTRY below.
 """
 
 import collections
@@ -29,36 +19,34 @@ import threading
 import time
 import webbrowser
 
-from flask import Flask, jsonify, render_template_string, request
-
 import app as seeder_app
 import app_erp as erp_app
+import app_emr as emr_app
 import virtual_printer as vprinter
 
-# Port the control panel itself listens on.  Chosen to avoid the app ports
-# (5757 seeder, 5758 erp, 9100 virtual printer).
-LAUNCHER_PORT = 5750
-LAUNCHER_URL = f'http://localhost:{LAUNCHER_PORT}'
+# macOS ships Helvetica Neue; Windows ships Segoe UI.
+_FONT_FAMILY = 'Helvetica Neue' if sys.platform == 'darwin' else 'Segoe UI'
+
+
+def _font(size, *modifiers):
+    """Return a tkinter font tuple for the current platform."""
+    return (_FONT_FAMILY, size) + modifiers
 
 
 def _maybe_attach_console():
-    """If --console was passed on the command line, allocate a Windows console
-    window and redirect stdout/stderr to it so server logs are visible.
-    On macOS/Linux the terminal is always available when launched from one,
-    so this is a no-op on those platforms."""
+    """Allocate a Windows console if --console was passed on the command line."""
     if '--console' not in sys.argv:
         return
     if sys.platform == 'win32':
         import ctypes
         ctypes.windll.kernel32.AllocConsole()
-        # Re-open the standard streams so Python output reaches the new console.
         sys.stdout = open('CONOUT$', 'w', encoding='utf-8')
         sys.stderr = open('CONOUT$', 'w', encoding='utf-8')
         sys.stdin  = open('CONIN$',  'r', encoding='utf-8')
 
 
 # ---------------------------------------------------------------------------
-# Registry of launchable apps — drives the control panel. Add new apps here.
+# Registry of launchable apps — drives both the Tkinter and browser UIs.
 # ---------------------------------------------------------------------------
 APP_REGISTRY = [
     {
@@ -78,6 +66,14 @@ APP_REGISTRY = [
         'run': erp_app.run_server,
     },
     {
+        'key': 'emr',
+        'label': 'Meridian Health EMR Demo',
+        'description': 'Fake healthcare EMR',
+        'port': 5759,
+        'url': 'http://localhost:5759',
+        'run': emr_app.run_server,
+    },
+    {
         'key': 'vprinter',
         'label': 'Virtual Printer (JetDirect)',
         'description': 'Accepts raw print jobs on port 9100',
@@ -87,16 +83,10 @@ APP_REGISTRY = [
     },
 ]
 
-# Registry lookup by key for the API handlers.
+# Registry lookup by key for the browser-launcher API handlers.
 _REGISTRY_BY_KEY = {entry['key']: entry for entry in APP_REGISTRY}
 
-# Keys of apps that have been started this session.
-_running = set()
-_running_lock = threading.Lock()
-
-# Virtual printer connection log.  The printer pushes one line per completed
-# job onto this queue; a background thread drains it into _printer_log so the
-# control panel can poll for new lines by index.
+# Virtual printer connection log shared between both UI paths.
 _vprinter_log_queue = queue.Queue()
 _printer_log = collections.deque(maxlen=1000)
 _printer_log_lock = threading.Lock()
@@ -110,7 +100,7 @@ def _port_in_use(port):
 
 
 def _start_app(entry):
-    """Start one app's server in a daemon thread."""
+    """Start one app server in a daemon thread."""
     kwargs = {'open_browser': False}
     if entry['key'] == 'vprinter':
         kwargs['log_queue'] = _vprinter_log_queue
@@ -131,10 +121,215 @@ def _drain_printer_log():
         with _printer_log_lock:
             _printer_log.append(line)
 
-# ---------------------------------------------------------------------------
-# Control panel web app
-# ---------------------------------------------------------------------------
-launcher_app = Flask(__name__)
+
+# ===========================================================================
+# Tkinter launcher  (Windows / Linux)
+# ===========================================================================
+
+class LauncherWindow:
+    """Native Tkinter launcher / status window."""
+
+    def __init__(self, root):
+        self.root = root
+        self.vars = {}
+        self.running = []
+
+        root.title('PrinterLogic Output Demo Launcher')
+        root.resizable(False, False)
+
+        outer = tk.Frame(root, padx=24, pady=20)
+        outer.pack(fill='both', expand=True)
+
+        # Pre-build both frames; swap with pack/pack_forget to avoid flicker.
+        self._sel_frame = tk.Frame(outer)
+        self._run_frame = tk.Frame(outer)
+
+        self._build_selection_view()
+        self._build_status_frame()
+
+        self._sel_frame.pack(fill='both', expand=True)
+
+    # -- Selection view ----------------------------------------------------
+    def _build_selection_view(self):
+        f = self._sel_frame
+
+        tk.Label(
+            f,
+            text='PrinterLogic Output Demo Launcher',
+            font=_font(14, 'bold'),
+        ).pack(anchor='w')
+
+        tk.Label(
+            f,
+            text='Select which apps to launch, then click Launch.',
+            font=_font(9),
+            fg='#555555',
+        ).pack(anchor='w', pady=(2, 14))
+
+        for entry in APP_REGISTRY:
+            var = tk.IntVar(value=0)
+            self.vars[entry['key']] = var
+
+            row = tk.Frame(f)
+            row.pack(fill='x', anchor='w', pady=2)
+
+            # Use command= instead of trace_add — avoids macOS visual doubling.
+            tk.Checkbutton(
+                row,
+                text=entry['label'],
+                variable=var,
+                font=_font(10),
+                command=self._update_launch_state,
+            ).pack(side='left')
+
+            tk.Label(
+                row,
+                text=f"— {entry['description']} (port {entry['port']})",
+                font=_font(8),
+                fg='#888888',
+            ).pack(side='left', padx=(4, 0))
+
+        # ttk.Button uses native rendering on Windows.
+        self.launch_btn = ttk.Button(
+            f,
+            text='Launch',
+            width=14,
+            state='disabled',
+            command=self._on_launch,
+        )
+        self.launch_btn.pack(anchor='e', pady=(16, 0))
+
+    def _update_launch_state(self):
+        any_selected = any(v.get() for v in self.vars.values())
+        self.launch_btn.config(state='normal' if any_selected else 'disabled')
+
+    # -- Status frame (pre-built, shown after launch) ----------------------
+    def _build_status_frame(self):
+        f = self._run_frame
+
+        tk.Label(
+            f,
+            text='Running',
+            font=_font(14, 'bold'),
+        ).pack(anchor='w')
+
+        tk.Label(
+            f,
+            text='These apps are live. Keep this window open while in use.',
+            font=_font(9),
+            fg='#555555',
+        ).pack(anchor='w', pady=(2, 14))
+
+        self._status_rows = tk.Frame(f)
+        self._status_rows.pack(fill='x')
+
+        ttk.Button(
+            f,
+            text='Quit',
+            width=14,
+            command=self._on_quit,
+        ).pack(anchor='e', pady=(16, 0))
+
+    def _populate_status_rows(self):
+        for entry in self.running:
+            row = tk.Frame(self._status_rows)
+            row.pack(fill='x', anchor='w', pady=2)
+
+            tk.Label(
+                row,
+                text=f"● {entry['label']}",
+                font=_font(10),
+                fg='#1a7f37',
+            ).pack(side='left')
+
+            if entry.get('url'):
+                link = tk.Label(
+                    row,
+                    text=entry['url'],
+                    font=_font(9, 'underline'),
+                    fg='#0969da',
+                    cursor='hand2',
+                )
+                link.pack(side='left', padx=(8, 0))
+                link.bind('<Button-1>', lambda _e, url=entry['url']: self._open(url))
+            else:
+                tk.Label(
+                    row,
+                    text=f"— listening on 127.0.0.1:{entry['port']}",
+                    font=_font(9),
+                    fg='#888888',
+                ).pack(side='left', padx=(8, 0))
+
+    # -- Launch ------------------------------------------------------------
+    def _on_launch(self):
+        selected = [e for e in APP_REGISTRY if self.vars[e['key']].get()]
+        if not selected:
+            return
+
+        in_use = [e for e in selected if _port_in_use(e['port'])]
+        if in_use:
+            names = '\n'.join(f"  • {e['label']} (port {e['port']})" for e in in_use)
+            messagebox.showerror(
+                'Port already in use',
+                'These apps appear to already be running:\n\n'
+                f'{names}\n\nClose the existing instance and try again.',
+            )
+            return
+
+        for entry in selected:
+            _start_app(entry)
+            self.running.append(entry)
+
+        def _open_browsers():
+            time.sleep(1.5)
+            for entry in self.running:
+                if entry.get('url'):
+                    webbrowser.open(entry['url'])
+                    time.sleep(0.4)
+
+        threading.Thread(target=_open_browsers, daemon=True).start()
+
+        self._populate_status_rows()
+        # Swap frames — no destroy/rebuild, avoids repaint overlap.
+        self._sel_frame.pack_forget()
+        self._run_frame.pack(fill='both', expand=True)
+
+    # -- Helpers -----------------------------------------------------------
+    @staticmethod
+    def _open(url):
+        webbrowser.open(url)
+
+    def _on_quit(self):
+        self.root.destroy()
+
+
+def _run_tkinter_launcher():
+    import tkinter as tk
+    from tkinter import ttk, messagebox
+    # Inject into module scope so LauncherWindow methods can reference them.
+    globals()['tk'] = tk
+    globals()['ttk'] = ttk
+    globals()['messagebox'] = messagebox
+
+    root = tk.Tk()
+    LauncherWindow(root)
+    root.mainloop()
+
+
+# ===========================================================================
+# Browser launcher  (macOS)
+# ===========================================================================
+
+from flask import Flask, jsonify, render_template_string, request  # noqa: E402
+
+LAUNCHER_PORT = 5750
+LAUNCHER_URL  = f'http://localhost:{LAUNCHER_PORT}'
+
+# Keys of apps started this session (browser path only).
+_running      = set()
+_running_lock = threading.Lock()
+
+launcher_app  = Flask(__name__)
 
 _PAGE = """<!doctype html>
 <html lang="en">
@@ -207,8 +402,6 @@ _PAGE = """<!doctype html>
 let logLen = 0;
 
 function render(apps) {
-  // Preserve any boxes the user has already ticked so the 2-second auto-refresh
-  // doesn't wipe pending selections before they can click Launch.
   const prevChecked = new Set(
     [...document.querySelectorAll('input[type=checkbox]:checked:not(:disabled)')]
       .map(cb => cb.dataset.key)
@@ -224,15 +417,13 @@ function render(apps) {
     let state = '';
     if (a.running) {
       if (a.url) {
-        state = `<div class="state"><span class="dot">●</span> Running —
+        state = `<div class="state"><span class="dot">&#x25CF;</span> Running \u2014
                  <a href="${a.url}" target="_blank">${a.url}</a></div>`;
       } else {
-        state = `<div class="state"><span class="dot">●</span> Running —
+        state = `<div class="state"><span class="dot">&#x25CF;</span> Running \u2014
                  listening on 127.0.0.1:${a.port}</div>`;
       }
     }
-    // If the app is running, lock the checkbox; otherwise restore the user's
-    // pending tick (if any) so auto-refresh doesn't clear it.
     const cbAttr = a.running
       ? 'checked disabled'
       : (prevChecked.has(a.key) ? 'checked' : '');
@@ -279,8 +470,8 @@ document.getElementById('launch').addEventListener('click', async () => {
   });
   const data = await r.json();
   if (data.errors && data.errors.length) {
-    alert('Could not start:\\n\\n' + data.errors.join('\\n') +
-          '\\n\\nClose the existing instance and try again.');
+    alert('Could not start:\n\n' + data.errors.join('\n') +
+          '\n\nClose the existing instance and try again.');
   }
   render(data.apps);
 });
@@ -299,7 +490,7 @@ async function pollLog() {
     const data = await r.json();
     if (data.lines && data.lines.length) {
       const log = document.getElementById('log');
-      data.lines.forEach(line => { log.textContent += line + '\\n'; });
+      data.lines.forEach(line => { log.textContent += line + '\n'; });
       log.scrollTop = log.scrollHeight;
       logLen = data.total;
     }
@@ -320,7 +511,6 @@ def index():
 
 
 def _status_payload():
-    """Build the list of apps with their current running state."""
     with _running_lock:
         running = set(_running)
     return [
@@ -355,7 +545,7 @@ def api_launch():
             continue
         entry = _REGISTRY_BY_KEY[key]
         if _port_in_use(entry['port']):
-            errors.append(f"  • {entry['label']} (port {entry['port']}) is already in use")
+            errors.append(f"  \u2022 {entry['label']} (port {entry['port']}) is already in use")
             continue
         to_start.append(entry)
 
@@ -367,8 +557,6 @@ def api_launch():
         if entry.get('url'):
             started_urls.append(entry['url'])
 
-    # Stagger browser opens so the servers have a moment to come up.  Entries
-    # without a URL (e.g. Virtual Printer) are skipped.
     if started_urls:
         def _open_browsers(urls):
             time.sleep(1.5)
@@ -397,8 +585,6 @@ def api_printer_log():
 
 @launcher_app.route('/api/quit', methods=['POST'])
 def api_quit():
-    # Servers run as daemon threads, so a hard process exit stops everything.
-    # Delay briefly so this HTTP response can be sent back to the browser first.
     def _shutdown():
         time.sleep(0.3)
         import os
@@ -407,24 +593,29 @@ def api_quit():
     return jsonify({'ok': True})
 
 
-def main():
-    _maybe_attach_console()
-
-    # Background worker that feeds the virtual printer connection log.
+def _run_browser_launcher():
     threading.Thread(target=_drain_printer_log, daemon=True).start()
 
-    # Open the control panel in the default browser shortly after the server
-    # starts listening.
     def _open_panel():
         time.sleep(1.0)
         webbrowser.open(LAUNCHER_URL)
     threading.Thread(target=_open_panel, daemon=True).start()
 
     print(f"PrinterLogic Output Demo Launcher running at {LAUNCHER_URL}")
-    # threaded=True so status polling and launches are handled concurrently;
-    # use_reloader=False so this works when frozen / run from a thread.
     launcher_app.run(debug=False, host='localhost', port=LAUNCHER_PORT,
                      threaded=True, use_reloader=False)
+
+
+# ===========================================================================
+# Entry point
+# ===========================================================================
+
+def main():
+    _maybe_attach_console()
+    if sys.platform == 'darwin':
+        _run_browser_launcher()
+    else:
+        _run_tkinter_launcher()
 
 
 if __name__ == '__main__':

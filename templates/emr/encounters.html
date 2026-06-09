@@ -1,0 +1,389 @@
+{% extends "emr/base.html" %}
+
+{% block title %}Encounters &amp; Orders{% endblock %}
+{% block breadcrumb %}Encounters &amp; Orders{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between" style="margin-bottom:20px;">
+  <div class="page-title" style="margin-bottom:0;">Encounters &amp; Orders</div>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding-bottom:0;">
+    <div class="tab-bar">
+      <button class="tab-btn {% if tab == 'encounters' %}active{% endif %}" data-tab="encounters">
+        Encounters ({{ encounters|length }})
+      </button>
+      <button class="tab-btn {% if tab == 'orders' %}active{% endif %}" data-tab="orders">
+        Lab &amp; Imaging Orders ({{ orders|length }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Encounters tab -->
+  <div id="tab-encounters" class="tab-pane {% if tab == 'encounters' %}active{% endif %}">
+    <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-primary btn-sm" id="enc-print-selected" disabled>
+        Print Selected (0)
+      </button>
+      <span class="text-muted" style="font-size:12px;">Select rows to print clinical notes as a batch.</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="check-col">
+              <input type="checkbox" id="enc-check-all" />
+            </th>
+            <th>Encounter</th>
+            <th>Patient</th>
+            <th>MRN</th>
+            <th>Type</th>
+            <th>Provider</th>
+            <th>Department</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enc in encounters %}
+          <tr data-id="{{ enc.id }}" data-type="enc">
+            <td class="check-col">
+              <input type="checkbox" class="enc-row-check" data-id="{{ enc.id }}" />
+            </td>
+            <td><strong>{{ enc.id }}</strong></td>
+            <td>{{ enc.patient }}</td>
+            <td class="text-muted">{{ enc.mrn }}</td>
+            <td>{{ enc.type }}</td>
+            <td>{{ enc.provider }}</td>
+            <td class="text-muted">{{ enc.department }}</td>
+            <td class="text-muted">{{ enc.date }}</td>
+            <td><span class="badge {{ 'badge-scheduled' if enc.status == 'Scheduled' else 'badge-progress' if enc.status == 'In Progress' else 'badge-completed' if enc.status == 'Completed' else 'badge-cancelled' }}">{{ enc.status }}</span></td>
+            <td>
+              <button class="btn btn-secondary btn-sm print-single-btn" data-id="{{ enc.id }}">Print</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Orders tab -->
+  <div id="tab-orders" class="tab-pane {% if tab == 'orders' %}active{% endif %}">
+    <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-primary btn-sm" id="ord-print-selected" disabled>
+        Print Selected (0)
+      </button>
+      <span class="text-muted" style="font-size:12px;">Select rows to print requisitions/results as a batch.</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="check-col">
+              <input type="checkbox" id="ord-check-all" />
+            </th>
+            <th>Order</th>
+            <th>Patient</th>
+            <th>Test / Study</th>
+            <th>Ordering Provider</th>
+            <th>Priority</th>
+            <th>Order Date</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          <tr data-id="{{ o.id }}" data-type="ord">
+            <td class="check-col">
+              <input type="checkbox" class="ord-row-check" data-id="{{ o.id }}" />
+            </td>
+            <td><strong>{{ o.id }}</strong></td>
+            <td>{{ o.patient }}</td>
+            <td>{{ o.test }}</td>
+            <td>{{ o.provider }}</td>
+            <td><span class="badge {{ 'badge-stat' if o.priority == 'STAT' else 'badge-routine' }}">{{ o.priority }}</span></td>
+            <td class="text-muted">{{ o.order_date }}</td>
+            <td><span class="badge {{ 'badge-pending' if o.status == 'Pending' else 'badge-collected' if o.status == 'Collected' else 'badge-resulted' if o.status == 'Resulted' else 'badge-reviewed' }}">{{ o.status }}</span></td>
+            <td>
+              <button class="btn btn-secondary btn-sm print-single-btn" data-id="{{ o.id }}">Print</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Print Modal -->
+<div class="modal-backdrop" id="bulk-print-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Bulk Print Documents</span>
+      <button class="modal-close" id="close-bulk-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Printer</label>
+        <select class="form-control" id="bulk-printer-select">
+          <option value="">Loading printers...</option>
+        </select>
+      </div>
+
+      <div id="bulk-progress-section" style="display:none;">
+        <div class="flex justify-between items-center mt-3" style="margin-bottom:6px;">
+          <span style="font-size:13px;" id="bulk-progress-label">Sending...</span>
+          <span style="font-size:12px;" class="text-muted" id="bulk-progress-count">0 / 0</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="bulk-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="job-log mt-3" id="bulk-job-log"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-bulk-btn">Cancel</button>
+      <button class="btn btn-primary" id="start-bulk-btn">Send to Printer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Single Print Printer Picker Modal -->
+<div class="modal-backdrop" id="single-print-modal">
+  <div class="modal" style="width:400px;">
+    <div class="modal-header">
+      <span class="modal-title">Print Document</span>
+      <button class="modal-close" id="close-single-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted" style="font-size:13px; margin-bottom:16px;">
+        Printing <strong id="single-order-id"></strong>
+      </p>
+      <div class="form-group">
+        <label class="form-label">Printer</label>
+        <select class="form-control" id="single-printer-select">
+          <option value="">Loading printers...</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-single-btn">Cancel</button>
+      <button class="btn btn-primary" id="confirm-single-btn">Print</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Tab switching ─────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Checkbox logic ────────────────────────────────────────
+function setupCheckboxes(rowClass, allId, btnId) {
+  const allChk  = document.getElementById(allId);
+  const printBtn = document.getElementById(btnId);
+
+  function updateBtn() {
+    const checked = document.querySelectorAll(`.${rowClass}:checked`);
+    printBtn.disabled = checked.length === 0;
+    printBtn.textContent = `Print Selected (${checked.length})`;
+  }
+
+  allChk.addEventListener('change', () => {
+    document.querySelectorAll(`.${rowClass}`).forEach(c => c.checked = allChk.checked);
+    updateBtn();
+  });
+
+  document.querySelectorAll(`.${rowClass}`).forEach(c => {
+    c.addEventListener('change', updateBtn);
+  });
+
+  return { printBtn };
+}
+
+const { printBtn: encPrintBtn } = setupCheckboxes('enc-row-check', 'enc-check-all', 'enc-print-selected');
+const { printBtn: ordPrintBtn } = setupCheckboxes('ord-row-check', 'ord-check-all', 'ord-print-selected');
+
+// ── Load printers ─────────────────────────────────────────
+let printersCache = [];
+
+async function loadPrinters(selectEl) {
+  if (printersCache.length) {
+    populatePrinterSelect(selectEl, printersCache);
+    return;
+  }
+  selectEl.innerHTML = '<option value="">Loading...</option>';
+  try {
+    const r = await fetch('/api/emr/printers');
+    const d = await r.json();
+    if (d.success && d.printers.length) {
+      printersCache = d.printers;
+      populatePrinterSelect(selectEl, printersCache);
+    } else {
+      selectEl.innerHTML = '<option value="">No printers found — check Admin settings</option>';
+    }
+  } catch(e) {
+    selectEl.innerHTML = '<option value="">Error loading printers</option>';
+  }
+}
+
+function populatePrinterSelect(selectEl, printers) {
+  selectEl.innerHTML = '<option value="">Select a printer...</option>' +
+    printers.map(p => `<option value="${p}">${p}</option>`).join('');
+  const saved = localStorage.getItem('pjs_lastPrinter');
+  if (saved && [...selectEl.options].some(o => o.value === saved)) selectEl.value = saved;
+}
+
+// ── Single print ──────────────────────────────────────────
+let pendingSingleId = null;
+
+document.querySelectorAll('.print-single-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pendingSingleId = btn.dataset.id;
+    document.getElementById('single-order-id').textContent = pendingSingleId;
+    document.getElementById('single-print-modal').classList.add('open');
+    loadPrinters(document.getElementById('single-printer-select'));
+  });
+});
+
+document.getElementById('close-single-modal').addEventListener('click', () => {
+  document.getElementById('single-print-modal').classList.remove('open');
+});
+document.getElementById('cancel-single-btn').addEventListener('click', () => {
+  document.getElementById('single-print-modal').classList.remove('open');
+});
+
+document.getElementById('confirm-single-btn').addEventListener('click', async () => {
+  const printer = document.getElementById('single-printer-select').value;
+  if (!printer) { showToast('Please select a printer.', 'error'); return; }
+
+  document.getElementById('single-print-modal').classList.remove('open');
+
+  try {
+    const r = await fetch('/api/emr/print-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: pendingSingleId, printer })
+    });
+    const d = await r.json();
+    if (d.success) {
+      localStorage.setItem('pjs_lastPrinter', printer);
+      showToast(`${pendingSingleId} sent to printer successfully.`, 'success');
+    } else {
+      showToast(`Print failed: ${d.message}`, 'error');
+    }
+  } catch(e) {
+    showToast('Network error — could not send print job.', 'error');
+  }
+});
+
+// ── Bulk print ────────────────────────────────────────────
+let activeBulkSession = null;
+
+function openBulkModal(orderIds) {
+  document.getElementById('bulk-print-modal').classList.add('open');
+  document.getElementById('bulk-progress-section').style.display = 'none';
+  document.getElementById('bulk-job-log').innerHTML = '';
+  document.getElementById('bulk-progress-fill').style.width = '0%';
+  document.getElementById('start-bulk-btn').disabled = false;
+  document.getElementById('start-bulk-btn').textContent = 'Send to Printer';
+  document.getElementById('cancel-bulk-btn').textContent = 'Cancel';
+  loadPrinters(document.getElementById('bulk-printer-select'));
+  window._bulkOrderIds = orderIds;
+}
+
+encPrintBtn.addEventListener('click', () => {
+  const ids = [...document.querySelectorAll('.enc-row-check:checked')].map(c => c.dataset.id);
+  openBulkModal(ids);
+});
+ordPrintBtn.addEventListener('click', () => {
+  const ids = [...document.querySelectorAll('.ord-row-check:checked')].map(c => c.dataset.id);
+  openBulkModal(ids);
+});
+
+document.getElementById('close-bulk-modal').addEventListener('click', stopBulkAndClose);
+document.getElementById('cancel-bulk-btn').addEventListener('click', stopBulkAndClose);
+
+function stopBulkAndClose() {
+  if (activeBulkSession) {
+    fetch(`/api/emr/stop-jobs/${activeBulkSession}`, { method: 'POST' });
+    activeBulkSession = null;
+  }
+  document.getElementById('bulk-print-modal').classList.remove('open');
+}
+
+document.getElementById('start-bulk-btn').addEventListener('click', async () => {
+  const printer = document.getElementById('bulk-printer-select').value;
+  if (!printer) { showToast('Please select a printer.', 'error'); return; }
+
+  const orderIds = window._bulkOrderIds || [];
+  const numJobs = orderIds.length;
+
+  document.getElementById('bulk-progress-section').style.display = 'block';
+  document.getElementById('start-bulk-btn').disabled = true;
+  document.getElementById('cancel-bulk-btn').textContent = 'Stop';
+  document.getElementById('bulk-progress-label').textContent = `Sending ${numJobs} jobs...`;
+  document.getElementById('bulk-progress-count').textContent = `0 / ${numJobs}`;
+
+  const form = new FormData();
+  form.append('num_jobs', numJobs);
+  form.append('timing_mode', 'random');
+  form.append('printer', printer);
+
+  try {
+    const r = await fetch('/api/emr/start-print-run', { method: 'POST', body: form });
+    const d = await r.json();
+    if (!d.success) { showToast(d.error || 'Failed to start print run.', 'error'); return; }
+    localStorage.setItem('pjs_lastPrinter', printer);
+    activeBulkSession = d.session_id;
+    streamBulkJobs(activeBulkSession, numJobs);
+  } catch(e) {
+    showToast('Network error.', 'error');
+  }
+});
+
+function streamBulkJobs(sessionId, total) {
+  const log = document.getElementById('bulk-job-log');
+  const fill = document.getElementById('bulk-progress-fill');
+  const countEl = document.getElementById('bulk-progress-count');
+  const labelEl = document.getElementById('bulk-progress-label');
+  let done = 0;
+
+  const es = new EventSource(`/api/emr/stream-jobs/${sessionId}`);
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'complete') {
+      es.close();
+      activeBulkSession = null;
+      labelEl.textContent = `Done — ${data.success}/${data.total} succeeded`;
+      document.getElementById('cancel-bulk-btn').textContent = 'Close';
+      document.getElementById('start-bulk-btn').disabled = false;
+      return;
+    }
+    done++;
+    const pct = Math.round((done / total) * 100);
+    fill.style.width = pct + '%';
+    countEl.textContent = `${done} / ${total}`;
+    const cls = data.success ? 'log-success' : 'log-error';
+    const icon = data.success ? '+' : 'x';
+    log.innerHTML += `<div class="${cls}">[${icon}] Job ${data.job_number} — ${data.filename} (${data.printer})</div>`;
+    log.scrollTop = log.scrollHeight;
+  };
+  es.onerror = () => es.close();
+}
+</script>
+{% endblock %}
