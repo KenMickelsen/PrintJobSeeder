@@ -170,6 +170,63 @@
             cursor: not-allowed;
         }
 
+        .btn-close-batch {
+            background: linear-gradient(135deg, #2ed573, #1e9e54);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-close-batch:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(46, 213, 115, 0.4);
+        }
+
+        .btn-close-batch:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-cancel-batch {
+            background: transparent;
+            color: #ff6b7a;
+            border: 2px solid rgba(255, 71, 87, 0.5);
+            padding: 13px 28px;
+            font-size: 1.05em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, background 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-cancel-batch:hover:not(:disabled) {
+            background: rgba(255, 71, 87, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .btn-cancel-batch:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .batch-close-hint {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .batch-close-hint.visible {
+            display: block;
+        }
+
         .row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1418,6 +1475,7 @@
                 <div class="mode-tab-header">
                     <button type="button" class="mode-tab-btn active" data-mode="single">⚡ Single Job</button>
                     <button type="button" class="mode-tab-btn" data-mode="bulk">📦 Bulk Jobs</button>
+                    <button type="button" class="mode-tab-btn" data-mode="batch">📚 Batch Jobs</button>
                 </div>
 
                 <!-- Single Job Content -->
@@ -1592,6 +1650,90 @@
             </div>
 
                 </div><!-- /mode-content-bulk -->
+
+                <!-- Batch Jobs Content -->
+                <div class="mode-content" id="mode-content-batch" style="display: none;">
+
+            <!-- Batch Settings -->
+            <div class="card">
+                <h2>📚 Batch Settings</h2>
+                <div class="form-group">
+                    <label>Batch Close Behavior</label>
+                    <div class="toggle-switch">
+                        <div class="toggle-option batch-close-toggle active" data-mode="auto">Auto-close batch</div>
+                        <div class="toggle-option batch-close-toggle" data-mode="manual">Manually close batch</div>
+                    </div>
+                    <input type="hidden" id="batch_close_mode" value="auto">
+                </div>
+                <div class="timing-description" id="batch-close-description">
+                    After all jobs in an industry batch are submitted, the batch will be closed automatically so Output can release them for printing. Each selected industry gets its own batch.
+                </div>
+            </div>
+
+            <!-- Industry Selection (Batch) -->
+            <div class="card">
+                <h2>🏢 Select Industries</h2>
+
+                <div class="automate-toggle-container">
+                    <label class="checkbox-toggle">
+                        <input type="checkbox" id="batchAutomateAllToggle">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="batchAutomateAllToggle">Automate All</label>
+                    <span style="color: #888; font-size: 0.9em;">— Auto-fetch printers and use presets for selected industries</span>
+
+                    <div class="automate-jobs-input" id="batchAutomateJobsInput">
+                        <label>Jobs per industry:</label>
+                        <input type="number" id="batchAutomateJobCount" value="10" min="1" max="1000">
+                    </div>
+                </div>
+
+                <div class="warning-box" id="batchAutomateWarning">
+                    ⚠️ <span>Automate All requires API Cloud Link to be configured for fetching printers.</span>
+                    <a id="openSettingsFromBatchAutomate" class="settings-link">Open Settings</a>
+                </div>
+
+                <p style="color: #888; margin-bottom: 15px;">Each selected industry is sent as its own batch (open → submit jobs → close), in order.</p>
+
+                <div class="industry-selector">
+                    {% for industry in industries %}
+                    <input type="checkbox" class="batch-industry-checkbox" id="batch_ind_{{ industry }}" data-industry="{{ industry }}">
+                    <label class="industry-label" for="batch_ind_{{ industry }}">{{ industry_names[industry] }}</label>
+                    {% endfor %}
+                </div>
+
+                <div class="tabs-container" id="batchIndustryTabs">
+                    <div class="tab-buttons" id="batchTabButtons"></div>
+                    <div id="batchTabContents">
+                        <div class="no-industries-message">
+                            👆 Select one or more industries above to configure batch print jobs
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit (Batch) -->
+            <div class="card">
+                <div class="button-row" style="flex-wrap: wrap;">
+                    <button type="button" class="btn-primary" id="batchSubmitBtn">🚀 Send Print Jobs</button>
+                    <button type="button" class="btn-close-batch" id="batchCloseBtn" style="display: none;" disabled>✅ Close Batch</button>
+                    <button type="button" class="btn-cancel-batch" id="batchCancelBtn" style="display: none;">✖️ Cancel Batch</button>
+                </div>
+                <div class="batch-close-hint" id="batchCloseHint">Waiting for you to close the current industry batch before continuing…</div>
+
+                <div class="error-message" id="batchErrorMessage"></div>
+
+                <div class="progress-container" id="batchProgressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="batchProgressFill"></div>
+                    </div>
+                    <div class="progress-text" id="batchProgressText">Preparing batch jobs...</div>
+                    <div class="results-log" id="batchResultsLog"></div>
+                    <div class="summary" id="batchSummary"></div>
+                </div>
+            </div>
+
+                </div><!-- /mode-content-batch -->
             </div><!-- /mode-tabs-container -->
         </form>
     </div>
@@ -1611,6 +1753,9 @@
         // Current session tracking
         let currentSessionId = null;
         let currentEventSource = null;
+
+        // Mode tab: single | bulk | batch
+        let currentMode = localStorage.getItem('printJobSeeder_mode') || 'single';
         
         // Current destination selection
         let currentDestination = null;
@@ -2332,13 +2477,12 @@
 
         // Switch between tabs
         function switchTab(industry) {
-            // Update button states
-            document.querySelectorAll('.tab-btn').forEach(btn => {
+            // Scope to bulk industry tabs only (batch mode has its own handlers)
+            document.querySelectorAll('#tabButtons .tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.industry === industry);
             });
             
-            // Update content visibility
-            document.querySelectorAll('.tab-content').forEach(content => {
+            document.querySelectorAll('#tabContents .tab-content').forEach(content => {
                 content.classList.toggle('active', content.dataset.industry === industry);
             });
         }
@@ -2666,9 +2810,10 @@
             return configs;
         }
 
-        // Form submission
+        // Form submission (Bulk Jobs only)
         document.getElementById('jobForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (currentMode !== 'bulk') return;
             
             const submitBtn = document.getElementById('submitBtn');
             const progressContainer = document.getElementById('progressContainer');
@@ -2862,10 +3007,8 @@
         });
 
         // =====================================
-        // MODE TABS (Single Job / Bulk Jobs)
+        // MODE TABS (Single Job / Bulk Jobs / Batch Jobs)
         // =====================================
-
-        let currentMode = localStorage.getItem('printJobSeeder_mode') || 'single';
 
         function switchMode(mode) {
             currentMode = mode;
@@ -2874,6 +3017,7 @@
             });
             document.getElementById('mode-content-single').style.display = mode === 'single' ? 'block' : 'none';
             document.getElementById('mode-content-bulk').style.display = mode === 'bulk' ? 'block' : 'none';
+            document.getElementById('mode-content-batch').style.display = mode === 'batch' ? 'block' : 'none';
             localStorage.setItem('printJobSeeder_mode', mode);
         }
 
@@ -3094,6 +3238,712 @@
         document.getElementById('singleJobPrinterSelect').addEventListener('change', function() {
             if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
         });
+
+        // =====================================
+        // BATCH JOBS
+        // =====================================
+
+        let batchActiveIndustries = new Set();
+        let batchAutomateAllEnabled = false;
+        let batchSessionId = null;
+        let batchEventSource = null;
+        let batchCompletedCount = 0;
+        let batchSuccessCount = 0;
+        let batchTotalJobs = 0;
+
+        const batchCloseDescriptions = {
+            auto: 'After all jobs in an industry batch are submitted, the batch will be closed automatically so Output can release them for printing. Each selected industry gets its own batch.',
+            manual: 'Jobs are submitted after each industry batch is opened. You must press Close Batch after each industry’s jobs are sent before the next industry batch starts.'
+        };
+
+        document.querySelectorAll('.batch-close-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const mode = toggle.dataset.mode;
+                document.querySelectorAll('.batch-close-toggle').forEach(t => {
+                    t.classList.toggle('active', t.dataset.mode === mode);
+                });
+                document.getElementById('batch_close_mode').value = mode;
+                document.getElementById('batch-close-description').textContent = batchCloseDescriptions[mode];
+                // Show Close button slot only in manual mode (enabled later when awaiting)
+                const closeBtn = document.getElementById('batchCloseBtn');
+                if (mode === 'manual') {
+                    closeBtn.style.display = 'block';
+                    closeBtn.disabled = true;
+                } else if (!batchSessionId) {
+                    closeBtn.style.display = 'none';
+                }
+            });
+        });
+
+        function createBatchTabContent(industry) {
+            const displayName = industryNames[industry];
+            return `
+                <div class="tab-content batch-tab-content" id="batch-tab-${industry}" data-industry="${industry}">
+                    <div class="collapsed-summary" id="batch-collapsed-summary-${industry}" style="display: none;">
+                        <div class="status-item">
+                            <span class="status-icon ready" id="batch-printers-status-icon-${industry}">⏳</span>
+                            <span>Printers: <span id="batch-printers-status-${industry}">Will auto-fetch on send</span></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-icon ready">✅</span>
+                            <span>Using ${displayName} filename &amp; username presets</span>
+                        </div>
+                    </div>
+
+                    <div class="tab-section">
+                        <h3>📄 PDF Source</h3>
+                        <div class="form-group">
+                            <div class="toggle-switch">
+                                <div class="toggle-option batch-pdf-toggle active" data-industry="${industry}" data-source="generate">⚡ Generate PDF</div>
+                                <div class="toggle-option batch-pdf-toggle" data-industry="${industry}" data-source="upload">📁 Upload File</div>
+                            </div>
+                        </div>
+                        <div class="pdf-source-section active" id="batch-generate-section-${industry}">
+                            <div class="row" style="max-width: 400px;">
+                                <div class="form-group">
+                                    <label>Min Pages</label>
+                                    <input type="number" class="batch-min-pages" data-industry="${industry}" value="1" min="1" max="15">
+                                </div>
+                                <span>to</span>
+                                <div class="form-group">
+                                    <label>Max Pages</label>
+                                    <input type="number" class="batch-max-pages" data-industry="${industry}" value="15" min="1" max="15">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pdf-source-section" id="batch-upload-section-${industry}">
+                            <div class="form-group">
+                                <label>PDF File</label>
+                                <input type="file" class="batch-file-upload" data-industry="${industry}" accept=".pdf">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-section">
+                        <h3>📝 Filenames</h3>
+                        <div class="form-group">
+                            <button type="button" class="preset-btn batch-use-preset-filenames" data-industry="${industry}">
+                                Use ${displayName} Preset
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>Filenames <span class="hint">(comma-separated)</span></label>
+                            <textarea class="batch-filenames-input" data-industry="${industry}" placeholder="Enter filenames or use preset above..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="tab-section">
+                        <h3>👥 Usernames</h3>
+                        <div class="form-group">
+                            <button type="button" class="preset-btn batch-use-preset-usernames" data-industry="${industry}">
+                                Use ${displayName} Preset
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>Usernames <span class="hint">(comma-separated)</span></label>
+                            <textarea class="batch-usernames-input" data-industry="${industry}" placeholder="Enter usernames or use preset above..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="tab-section">
+                        <h3>🖨️ Printers</h3>
+                        <div class="form-group">
+                            <button type="button" class="btn-get-printers batch-btn-get-printers" data-industry="${industry}">
+                                <span class="btn-text">📥 Get Printers from Vasion</span>
+                            </button>
+                            <div class="printer-fetch-result" id="batch-printer-result-${industry}" style="display: none;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Printer Names <span class="hint">(comma-separated)</span></label>
+                            <textarea class="batch-printers-input" data-industry="${industry}" placeholder="HP Office, Canon Lobby, Xerox Dept A"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="tab-section">
+                        <h3>🔢 Number of Jobs</h3>
+                        <div class="form-group" style="max-width: 200px;">
+                            <label>Jobs for ${displayName}</label>
+                            <input type="number" class="batch-num-jobs" data-industry="${industry}" value="10" min="1" max="1000">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateBatchTabs() {
+            const tabButtons = document.getElementById('batchTabButtons');
+            const tabContents = document.getElementById('batchTabContents');
+            tabButtons.innerHTML = '';
+            tabContents.querySelectorAll('.batch-tab-content').forEach(tab => tab.remove());
+
+            if (batchActiveIndustries.size === 0) {
+                tabContents.innerHTML = '<div class="no-industries-message">👆 Select one or more industries above to configure batch print jobs</div>';
+                return;
+            }
+
+            const noMsg = tabContents.querySelector('.no-industries-message');
+            if (noMsg) noMsg.remove();
+
+            let isFirst = true;
+            batchActiveIndustries.forEach(industry => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `tab-btn batch-tab-btn${isFirst ? ' active' : ''}`;
+                btn.dataset.industry = industry;
+                btn.textContent = industryNames[industry];
+                btn.addEventListener('click', () => switchBatchTab(industry));
+                tabButtons.appendChild(btn);
+
+                tabContents.insertAdjacentHTML('beforeend', createBatchTabContent(industry));
+                const tabContent = document.getElementById(`batch-tab-${industry}`);
+                if (isFirst) tabContent.classList.add('active');
+
+                tabContent.querySelector('.batch-filenames-input').value = presets[industry].join(', ');
+                tabContent.querySelector('.batch-usernames-input').value = usernamePresets[industry].join(', ');
+                isFirst = false;
+            });
+
+            attachBatchTabEventListeners();
+            if (batchAutomateAllEnabled) toggleBatchAutomateAll(true);
+        }
+
+        function switchBatchTab(industry) {
+            document.querySelectorAll('.batch-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.industry === industry);
+            });
+            document.querySelectorAll('.batch-tab-content').forEach(content => {
+                content.classList.toggle('active', content.dataset.industry === industry);
+            });
+        }
+
+        function attachBatchTabEventListeners() {
+            document.querySelectorAll('.batch-pdf-toggle').forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const industry = toggle.dataset.industry;
+                    const source = toggle.dataset.source;
+                    document.querySelectorAll(`.batch-pdf-toggle[data-industry="${industry}"]`).forEach(t => {
+                        t.classList.toggle('active', t.dataset.source === source);
+                    });
+                    document.getElementById(`batch-generate-section-${industry}`).classList.toggle('active', source === 'generate');
+                    document.getElementById(`batch-upload-section-${industry}`).classList.toggle('active', source === 'upload');
+                });
+            });
+
+            document.querySelectorAll('.batch-use-preset-filenames').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const industry = btn.dataset.industry;
+                    document.querySelector(`.batch-filenames-input[data-industry="${industry}"]`).value = presets[industry].join(', ');
+                });
+            });
+
+            document.querySelectorAll('.batch-use-preset-usernames').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const industry = btn.dataset.industry;
+                    document.querySelector(`.batch-usernames-input[data-industry="${industry}"]`).value = usernamePresets[industry].join(', ');
+                });
+            });
+
+            document.querySelectorAll('.batch-btn-get-printers').forEach(btn => {
+                btn.addEventListener('click', () => getBatchPrintersForIndustry(industryFromBtn(btn), btn));
+            });
+        }
+
+        function industryFromBtn(btn) {
+            return btn.dataset.industry;
+        }
+
+        async function getBatchPrintersForIndustry(industry, btn) {
+            const btnText = btn.querySelector('.btn-text');
+            const resultDiv = document.getElementById(`batch-printer-result-${industry}`);
+            btn.disabled = true;
+            btnText.textContent = '⏳ Fetching...';
+            try {
+                const response = await fetch(`/api/printers/${industry}`);
+                const data = await response.json();
+                if (data.success && data.printers.length > 0) {
+                    document.querySelector(`.batch-printers-input[data-industry="${industry}"]`).value = data.printers.join(', ');
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'printer-fetch-result success';
+                    resultDiv.textContent = `✅ Loaded ${data.printers.length} printer(s)`;
+                    const statusSpan = document.getElementById(`batch-printers-status-${industry}`);
+                    const statusIcon = document.getElementById(`batch-printers-status-icon-${industry}`);
+                    if (statusSpan) statusSpan.textContent = `${data.printers.length} printer(s) loaded`;
+                    if (statusIcon) { statusIcon.textContent = '✅'; statusIcon.className = 'status-icon ready'; }
+                } else {
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'printer-fetch-result error';
+                    resultDiv.textContent = `❌ ${data.error || 'No printers found'}`;
+                }
+            } catch (err) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'printer-fetch-result error';
+                resultDiv.textContent = `❌ ${err.message}`;
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = '📥 Get Printers from Vasion';
+            }
+        }
+
+        function updateBatchAutomateWarning() {
+            const warning = document.getElementById('batchAutomateWarning');
+            if (!warning) return;
+            const cloudConfigured = settingsCache && settingsCache.cloud_link && settingsCache.cloud_link.valid;
+            warning.style.display = cloudConfigured ? 'none' : 'block';
+            const checkbox = document.getElementById('batchAutomateAllToggle');
+            if (checkbox && !cloudConfigured) {
+                checkbox.disabled = true;
+                checkbox.checked = false;
+                batchAutomateAllEnabled = false;
+            } else if (checkbox && cloudConfigured) {
+                checkbox.disabled = false;
+            }
+        }
+
+        function toggleBatchAutomateAll(enabled) {
+            batchAutomateAllEnabled = enabled;
+            batchActiveIndustries.forEach(industry => {
+                const tabContent = document.getElementById(`batch-tab-${industry}`);
+                if (!tabContent) return;
+                const collapsedSummary = document.getElementById(`batch-collapsed-summary-${industry}`);
+                const sections = tabContent.querySelectorAll('.tab-section');
+                if (enabled) {
+                    if (collapsedSummary) collapsedSummary.style.display = 'block';
+                    sections.forEach(section => section.style.display = 'none');
+                } else {
+                    if (collapsedSummary) collapsedSummary.style.display = 'none';
+                    sections.forEach(section => section.style.display = 'block');
+                }
+            });
+            const jobsContainer = document.getElementById('batchAutomateJobsInput');
+            if (jobsContainer) jobsContainer.style.display = enabled ? 'flex' : 'none';
+        }
+
+        document.getElementById('batchAutomateAllToggle')?.addEventListener('change', async (e) => {
+            const enabled = e.target.checked;
+            toggleBatchAutomateAll(enabled);
+            if (enabled) {
+                for (const industry of batchActiveIndustries) {
+                    const btn = document.querySelector(`.batch-btn-get-printers[data-industry="${industry}"]`);
+                    if (btn) await getBatchPrintersForIndustry(industry, btn);
+                }
+            }
+        });
+
+        document.getElementById('openSettingsFromBatchAutomate')?.addEventListener('click', openSettingsModal);
+
+        document.querySelectorAll('.batch-industry-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', async () => {
+                const industry = checkbox.dataset.industry;
+                if (checkbox.checked) batchActiveIndustries.add(industry);
+                else batchActiveIndustries.delete(industry);
+                updateBatchTabs();
+                if (checkbox.checked && batchAutomateAllEnabled) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    const btn = document.querySelector(`.batch-btn-get-printers[data-industry="${industry}"]`);
+                    if (btn) await getBatchPrintersForIndustry(industry, btn);
+                }
+            });
+        });
+
+        function getBatchIndustryConfigs() {
+            const configs = {};
+            // Preserve checkbox/DOM order of industries
+            industries.forEach(industry => {
+                if (!batchActiveIndustries.has(industry)) return;
+                const tabContent = document.getElementById(`batch-tab-${industry}`);
+                if (!tabContent) return;
+                const generateToggle = tabContent.querySelector(`.batch-pdf-toggle[data-source="generate"]`);
+                const pdfSource = generateToggle && generateToggle.classList.contains('active') ? 'generate' : 'upload';
+                configs[industry] = {
+                    pdf_source: pdfSource,
+                    min_pages: tabContent.querySelector('.batch-min-pages').value,
+                    max_pages: tabContent.querySelector('.batch-max-pages').value,
+                    filenames: tabContent.querySelector('.batch-filenames-input').value,
+                    usernames: tabContent.querySelector('.batch-usernames-input').value,
+                    printers: tabContent.querySelector('.batch-printers-input').value,
+                    num_jobs: tabContent.querySelector('.batch-num-jobs').value
+                };
+            });
+            return configs;
+        }
+
+        function resetBatchButtons() {
+            const submitBtn = document.getElementById('batchSubmitBtn');
+            const closeBtn = document.getElementById('batchCloseBtn');
+            const cancelBtn = document.getElementById('batchCancelBtn');
+            const hint = document.getElementById('batchCloseHint');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 Send Print Jobs';
+            cancelBtn.style.display = 'none';
+            hint.classList.remove('visible');
+            const closeMode = document.getElementById('batch_close_mode').value;
+            if (closeMode === 'manual') {
+                closeBtn.style.display = 'block';
+                closeBtn.disabled = true;
+                closeBtn.textContent = '✅ Close Batch';
+            } else {
+                closeBtn.style.display = 'none';
+                closeBtn.disabled = true;
+            }
+            batchSessionId = null;
+        }
+
+        function appendBatchLog(html, className = '') {
+            const resultsLog = document.getElementById('batchResultsLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${className}`.trim();
+            entry.innerHTML = html;
+            resultsLog.insertBefore(entry, resultsLog.firstChild);
+        }
+
+        function connectToBatchStream(sessionId, totalJobs) {
+            batchCompletedCount = 0;
+            batchSuccessCount = 0;
+            batchTotalJobs = totalJobs;
+
+            if (batchEventSource) {
+                batchEventSource.close();
+                batchEventSource = null;
+            }
+
+            const progressFill = document.getElementById('batchProgressFill');
+            const progressText = document.getElementById('batchProgressText');
+            const summary = document.getElementById('batchSummary');
+            const errorMessage = document.getElementById('batchErrorMessage');
+            const closeBtn = document.getElementById('batchCloseBtn');
+            const hint = document.getElementById('batchCloseHint');
+
+            batchEventSource = new EventSource(`/api/stream-batch-jobs/${sessionId}`);
+
+            batchEventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    errorMessage.textContent = data.error;
+                    errorMessage.classList.add('visible');
+                    batchEventSource.close();
+                    batchEventSource = null;
+                    resetBatchButtons();
+                    return;
+                }
+
+                if (data.type === 'batch_opened') {
+                    appendBatchLog(
+                        `<span class="details">📂 Opened batch <code>${escapeHtml(data.name)}</code> (${data.job_count} jobs) — <code>${escapeHtml(data.batch_id)}</code></span>`,
+                        'success'
+                    );
+                    progressText.textContent = `Batch open: ${industryNames[data.industry] || data.industry} — submitting ${data.job_count} job(s)...`;
+                    closeBtn.disabled = true;
+                    hint.classList.remove('visible');
+                }
+                else if (data.type === 'job_result') {
+                    const result = data.result;
+                    batchCompletedCount++;
+                    if (result.success) batchSuccessCount++;
+                    const statusIcon = result.success ? '✅' : '❌';
+                    const industryDisplay = industryNames[result.industry] || result.industry || '';
+                    let errorResponseHtml = '';
+                    if (!result.success && result.response) {
+                        errorResponseHtml = `<div class="error-response">${escapeHtml(result.response)}</div>`;
+                    }
+                    const jobIdShort = result.job_id ? ` <code>${escapeHtml(result.job_id.substring(0, 8))}…</code>` : '';
+                    appendBatchLog(`
+                        <span class="job-num">Job ${result.job_number}</span>
+                        <span class="industry-badge">${industryDisplay}</span>
+                        <span class="details">
+                            ${escapeHtml(result.filename)} → ${escapeHtml(result.printer)} (${escapeHtml(result.username)})${jobIdShort}
+                            ${result.status_code ? `[${result.status_code}]` : ''}
+                        </span>
+                        <span class="status-icon">${statusIcon}</span>
+                        ${errorResponseHtml}
+                    `, result.success ? 'success' : 'error');
+                    progressFill.style.width = `${data.progress}%`;
+                    progressText.textContent = `Sent ${batchCompletedCount}/${batchTotalJobs} jobs (${batchSuccessCount} successful)`;
+                }
+                else if (data.type === 'awaiting_close') {
+                    appendBatchLog(
+                        `<span class="details">⏸️ Ready to close batch for ${industryNames[data.industry] || data.industry}: <code>${escapeHtml(data.name)}</code></span>`
+                    );
+                    progressText.textContent = `Awaiting Close Batch for ${industryNames[data.industry] || data.industry}…`;
+                    closeBtn.style.display = 'block';
+                    closeBtn.disabled = false;
+                    closeBtn.textContent = '✅ Close Batch';
+                    hint.classList.add('visible');
+                    hint.textContent = `Close the ${industryNames[data.industry] || data.industry} batch to continue to the next industry (or finish).`;
+                }
+                else if (data.type === 'batch_closed') {
+                    const ok = data.success === true;
+                    const detail = data.response ? ` — ${escapeHtml(data.response)}` : '';
+                    const status = data.status_code != null ? ` [${data.status_code}]` : '';
+                    if (ok) {
+                        appendBatchLog(
+                            `<span class="details">🔒 Batch closed on Output for ${industryNames[data.industry] || data.industry} — <code>${escapeHtml(data.batch_id)}</code>${status}</span>`,
+                            'success'
+                        );
+                        progressText.textContent = `Batch closed for ${industryNames[data.industry] || data.industry}`;
+                    } else {
+                        appendBatchLog(
+                            `<span class="details">❌ Failed to close batch for ${industryNames[data.industry] || data.industry} — <code>${escapeHtml(data.batch_id)}</code>${status}${detail}</span>`,
+                            'error'
+                        );
+                        errorMessage.textContent = `Batch close failed for ${industryNames[data.industry] || data.industry}. Jobs may still be paused on Output. ${data.response || ''}`;
+                        errorMessage.classList.add('visible');
+                        progressText.textContent = `Close failed for ${industryNames[data.industry] || data.industry}`;
+                    }
+                    closeBtn.disabled = true;
+                    hint.classList.remove('visible');
+                }
+                else if (data.type === 'error') {
+                    appendBatchLog(`<span class="details">❌ ${escapeHtml(data.message || 'Batch error')}</span>`, 'error');
+                    errorMessage.textContent = data.message || 'Batch error';
+                    errorMessage.classList.add('visible');
+                }
+                else if (data.type === 'cancelled') {
+                    batchEventSource.close();
+                    batchEventSource = null;
+                    summary.classList.add('visible', 'partial');
+                    summary.innerHTML = `✖️ Cancelled: ${data.success_count}/${data.completed} jobs sent. Open batches on Output were left as-is.`;
+                    progressText.textContent = 'Cancelled';
+                    resetBatchButtons();
+                }
+                else if (data.type === 'complete') {
+                    batchEventSource.close();
+                    batchEventSource = null;
+                    const failCount = totalJobs - data.success_count;
+                    summary.classList.add('visible');
+                    if (failCount === 0) {
+                        summary.classList.add('success');
+                        summary.innerHTML = `✅ All ${data.success_count} batch jobs sent successfully!`;
+                    } else if (data.success_count === 0) {
+                        summary.classList.add('error');
+                        summary.innerHTML = `❌ All ${failCount} jobs failed.`;
+                    } else {
+                        summary.classList.add('partial');
+                        summary.innerHTML = `⚠️ ${data.success_count} succeeded, ${failCount} failed.`;
+                    }
+                    progressText.textContent = 'Complete!';
+                    progressFill.style.width = '100%';
+                    resetBatchButtons();
+                }
+            };
+
+            batchEventSource.onerror = function() {
+                if (batchEventSource) {
+                    batchEventSource.close();
+                    batchEventSource = null;
+                }
+                if (batchCompletedCount < batchTotalJobs) {
+                    errorMessage.textContent = 'Connection lost during batch run.';
+                    errorMessage.classList.add('visible');
+                }
+                resetBatchButtons();
+            };
+        }
+
+        document.getElementById('batchCloseBtn').addEventListener('click', async () => {
+            if (!batchSessionId) return;
+            const closeBtn = document.getElementById('batchCloseBtn');
+            closeBtn.disabled = true;
+            closeBtn.textContent = '⏳ Closing...';
+            try {
+                const response = await fetch(`/api/close-batch/${batchSessionId}`, { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to close batch');
+                }
+            } catch (error) {
+                document.getElementById('batchErrorMessage').textContent = `Error: ${error.message}`;
+                document.getElementById('batchErrorMessage').classList.add('visible');
+                closeBtn.disabled = false;
+                closeBtn.textContent = '✅ Close Batch';
+            }
+        });
+
+        document.getElementById('batchCancelBtn').addEventListener('click', async () => {
+            if (!batchSessionId) {
+                resetBatchButtons();
+                return;
+            }
+            const cancelBtn = document.getElementById('batchCancelBtn');
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = '⏳ Cancelling...';
+            try {
+                await fetch(`/api/cancel-batch/${batchSessionId}`, { method: 'POST' });
+            } catch (error) {
+                console.error('Cancel batch error:', error);
+            }
+            if (batchEventSource) {
+                batchEventSource.close();
+                batchEventSource = null;
+            }
+            const summary = document.getElementById('batchSummary');
+            summary.classList.add('visible', 'partial');
+            summary.innerHTML = '✖️ Batch run cancelled in the seeder. Clear any open batches from the PrinterLogic Output interface if needed.';
+            document.getElementById('batchProgressText').textContent = 'Cancelled';
+            resetBatchButtons();
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = '✖️ Cancel Batch';
+        });
+
+        document.getElementById('batchSubmitBtn').addEventListener('click', async () => {
+            const submitBtn = document.getElementById('batchSubmitBtn');
+            const progressContainer = document.getElementById('batchProgressContainer');
+            const progressFill = document.getElementById('batchProgressFill');
+            const progressText = document.getElementById('batchProgressText');
+            const resultsLog = document.getElementById('batchResultsLog');
+            const summary = document.getElementById('batchSummary');
+            const errorMessage = document.getElementById('batchErrorMessage');
+            const cancelBtn = document.getElementById('batchCancelBtn');
+            const closeBtn = document.getElementById('batchCloseBtn');
+
+            if (!currentDestination) {
+                errorMessage.textContent = 'Error: Please select an API destination (Cloud, On-premise, or Manual).';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            if (currentDestination === 'cloud' && (!settingsCache || !settingsCache.cloud_link.valid)) {
+                errorMessage.textContent = 'Error: API Cloud Link is not configured. Please configure it in Settings.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            if (currentDestination === 'onprem' && (!settingsCache || !settingsCache.on_premise.valid)) {
+                errorMessage.textContent = 'Error: On-premise Output Service is not configured. Please configure it in Settings.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            if (currentDestination === 'manual' && !document.getElementById('manual_url').value.trim()) {
+                errorMessage.textContent = 'Error: Please enter an API URL for Manual mode.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+            if (batchActiveIndustries.size === 0) {
+                errorMessage.textContent = 'Error: Please select at least one industry.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+
+            if (batchAutomateAllEnabled) {
+                submitBtn.textContent = '⏳ Fetching Printers...';
+                progressContainer.classList.add('visible');
+                progressText.textContent = 'Fetching printers from Vasion API...';
+                for (const industry of batchActiveIndustries) {
+                    const btn = document.querySelector(`.batch-btn-get-printers[data-industry="${industry}"]`);
+                    if (btn) await getBatchPrintersForIndustry(industry, btn);
+                    const printers = document.querySelector(`.batch-printers-input[data-industry="${industry}"]`)?.value?.trim();
+                    if (!printers) {
+                        errorMessage.textContent = `Error: ${industryNames[industry]} - No printers found. Check Settings folder paths.`;
+                        errorMessage.classList.add('visible');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '🚀 Send Print Jobs';
+                        progressContainer.classList.remove('visible');
+                        return;
+                    }
+                }
+                const jobsPerIndustry = parseInt(document.getElementById('batchAutomateJobCount')?.value) || 10;
+                batchActiveIndustries.forEach(industry => {
+                    const jobsInput = document.querySelector(`.batch-num-jobs[data-industry="${industry}"]`);
+                    if (jobsInput) jobsInput.value = jobsPerIndustry;
+                });
+            }
+
+            const industryConfigs = getBatchIndustryConfigs();
+            for (const [industry, config] of Object.entries(industryConfigs)) {
+                if (!config.filenames.trim()) {
+                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter filenames or use the preset.`;
+                    errorMessage.classList.add('visible');
+                    return;
+                }
+                if (!config.usernames.trim()) {
+                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter usernames or use the preset.`;
+                    errorMessage.classList.add('visible');
+                    return;
+                }
+                if (!config.printers.trim()) {
+                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter printer names.`;
+                    errorMessage.classList.add('visible');
+                    return;
+                }
+                if (config.pdf_source === 'upload') {
+                    const fileInput = document.querySelector(`.batch-file-upload[data-industry="${industry}"]`);
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        errorMessage.textContent = `Error: ${industryNames[industry]} - Please upload a PDF file.`;
+                        errorMessage.classList.add('visible');
+                        return;
+                    }
+                }
+            }
+
+            const destConfig = await getDestinationUrlAndToken();
+            if (!destConfig.url) {
+                errorMessage.textContent = 'Error: Could not determine API URL. Please check your settings.';
+                errorMessage.classList.add('visible');
+                return;
+            }
+
+            errorMessage.classList.remove('visible');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Sending Batches...';
+            progressContainer.classList.add('visible');
+            progressFill.style.width = '0%';
+            resultsLog.innerHTML = '';
+            summary.classList.remove('visible', 'success', 'partial', 'error');
+            summary.innerHTML = '';
+            cancelBtn.style.display = 'block';
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = '✖️ Cancel Batch';
+
+            const closeMode = document.getElementById('batch_close_mode').value;
+            if (closeMode === 'manual') {
+                closeBtn.style.display = 'block';
+                closeBtn.disabled = true;
+            } else {
+                closeBtn.style.display = 'none';
+            }
+
+            let totalJobs = 0;
+            for (const config of Object.values(industryConfigs)) {
+                totalJobs += parseInt(config.num_jobs) || 0;
+            }
+            progressText.textContent = `Preparing ${totalJobs} job(s) across ${batchActiveIndustries.size} batch(es)...`;
+
+            const formData = new FormData();
+            formData.append('url', destConfig.url);
+            formData.append('bearer_token', destConfig.token || '');
+            formData.append('close_mode', closeMode);
+            formData.append('industry_configs', JSON.stringify(industryConfigs));
+            Object.keys(industryConfigs).forEach(industry => {
+                if (industryConfigs[industry].pdf_source === 'upload') {
+                    const fileInput = document.querySelector(`.batch-file-upload[data-industry="${industry}"]`);
+                    if (fileInput.files.length > 0) {
+                        formData.append(`file_${industry}`, fileInput.files[0]);
+                    }
+                }
+            });
+
+            try {
+                const startResponse = await fetch('/api/start-batch-jobs', { method: 'POST', body: formData });
+                const startData = await startResponse.json();
+                if (!startResponse.ok || !startData.success) {
+                    throw new Error(startData.error || 'Failed to start batch jobs');
+                }
+                batchSessionId = startData.session_id;
+                batchTotalJobs = startData.total_jobs;
+                progressText.textContent = `Starting ${batchTotalJobs} job(s) in ${startData.batch_count} batch(es)...`;
+                connectToBatchStream(batchSessionId, batchTotalJobs);
+            } catch (error) {
+                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.classList.add('visible');
+                progressContainer.classList.remove('visible');
+                resetBatchButtons();
+            }
+        });
+
+        // Keep batch automate warning in sync with settings changes
+        const _prevUpdateAutomate = updateAutomateWarning;
+        updateAutomateWarning = function() {
+            _prevUpdateAutomate();
+            updateBatchAutomateWarning();
+        };
+        updateBatchAutomateWarning();
     </script>
 </body>
 </html>

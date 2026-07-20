@@ -749,6 +749,163 @@ def get_cloud_base_url(region):
     return f"https://external-api.app.{domain}"
 
 
+def get_api_base_url(print_url):
+    """Derive the API base URL from a /v1/print URL (cloud, on-prem, or manual)."""
+    if not print_url:
+        return None
+    url = print_url.strip().rstrip('/')
+    suffix = '/v1/print'
+    if url.lower().endswith(suffix):
+        return url[:-len(suffix)]
+    return url
+
+
+def format_auth_header(bearer_token):
+    """Normalize auth to `Bearer <token>` for Cloud Link APIs (YAML bearerAuth)."""
+    if not bearer_token:
+        return None
+    token = bearer_token.strip()
+    if not token:
+        return None
+    if token.lower().startswith('bearer '):
+        return token
+    return f'Bearer {token}'
+
+
+def open_batch(base_url, bearer_token, batch_id, job_ids, name, require_all_jobs=True):
+    """Open a batch via POST /v1/batch/open. Returns a result dict."""
+    url = f"{base_url.rstrip('/')}/v1/batch/open"
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    # Prefer documented Bearer form; fall back is handled by format_auth_header
+    auth = format_auth_header(bearer_token)
+    if auth:
+        headers['Authorization'] = auth
+
+    payload = {
+        'batchID': batch_id,
+        'jobIDs': list(job_ids),
+        'requireAllJobs': require_all_jobs,
+        'name': name
+    }
+
+    try:
+        log(f"")
+        log(f"{'='*60}")
+        log(f"BATCH OPEN - {name}")
+        log(f"  URL: {url}")
+        log(f"  batchID: {batch_id}")
+        log(f"  jobIDs ({len(job_ids)}): {job_ids[:3]}{'...' if len(job_ids) > 3 else ''}")
+        log(f"  requireAllJobs: {require_all_jobs}")
+        log(f"  Authorization: {'Bearer ***' if auth else '(none)'}")
+
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+
+        # If Bearer was rejected, retry once with the raw token (legacy seeder style)
+        if response.status_code == 401 and bearer_token and auth and auth != bearer_token.strip():
+            log(f"  Bearer auth returned 401 — retrying open with raw Authorization token")
+            headers['Authorization'] = bearer_token.strip()
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+
+        log(f"  Status Code: {response.status_code}")
+        log(f"  Response Body: {response.text[:1000] if response.text else '(empty)'}")
+        log(f"{'='*60}")
+
+        return {
+            'success': response.status_code in [200, 201],
+            'status_code': response.status_code,
+            'batch_id': batch_id,
+            'name': name,
+            'response': response.text[:500] if response.text else '',
+            'auth_mode': 'raw' if headers.get('Authorization') == (bearer_token or '').strip() else 'bearer'
+        }
+    except requests.exceptions.Timeout:
+        return {
+            'success': False, 'status_code': None, 'batch_id': batch_id,
+            'name': name, 'response': 'Request timed out'
+        }
+    except Exception as e:
+        return {
+            'success': False, 'status_code': None, 'batch_id': batch_id,
+            'name': name, 'response': str(e)
+        }
+
+
+def close_batch(base_url, bearer_token, batch_id, retries=5, retry_delay=1.5, auth_mode=None):
+    """Close a batch via POST /v1/batch/close.
+
+    Retries on failure (common when requireAllJobs=true and Output has not
+    finished associating the last parallel job submits yet).
+    """
+    url = f"{base_url.rstrip('/')}/v1/batch/close"
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+    # Match the auth style that succeeded on open when provided
+    if auth_mode == 'raw' and bearer_token:
+        headers['Authorization'] = bearer_token.strip()
+    else:
+        auth = format_auth_header(bearer_token)
+        if auth:
+            headers['Authorization'] = auth
+
+    payload = {'batchID': batch_id}
+    last_result = None
+
+    for attempt in range(1, max(1, retries) + 1):
+        try:
+            log(f"")
+            log(f"{'='*60}")
+            log(f"BATCH CLOSE (attempt {attempt}/{retries})")
+            log(f"  URL: {url}")
+            log(f"  batchID: {batch_id}")
+
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+
+            # On first-attempt 401 with Bearer, flip to raw token and continue retrying
+            if (
+                attempt == 1
+                and response.status_code == 401
+                and bearer_token
+                and headers.get('Authorization', '').lower().startswith('bearer ')
+            ):
+                log(f"  Bearer auth returned 401 — switching to raw Authorization token")
+                headers['Authorization'] = bearer_token.strip()
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+
+            log(f"  Status Code: {response.status_code}")
+            log(f"  Response Body: {response.text[:1000] if response.text else '(empty)'}")
+            log(f"{'='*60}")
+
+            last_result = {
+                'success': response.status_code in [200, 202],
+                'status_code': response.status_code,
+                'batch_id': batch_id,
+                'response': response.text[:500] if response.text else '',
+                'attempt': attempt
+            }
+            if last_result['success']:
+                return last_result
+
+            # Retry on 400 (often "not all jobs received yet") and transient errors
+            if response.status_code not in (400, 408, 429, 500, 502, 503, 504):
+                return last_result
+
+        except requests.exceptions.Timeout:
+            last_result = {
+                'success': False, 'status_code': None, 'batch_id': batch_id,
+                'response': 'Request timed out', 'attempt': attempt
+            }
+        except Exception as e:
+            last_result = {
+                'success': False, 'status_code': None, 'batch_id': batch_id,
+                'response': str(e), 'attempt': attempt
+            }
+
+        if attempt < retries:
+            time.sleep(retry_delay)
+
+    return last_result
+
+
 def fetch_printers_from_api(api_key, base_url, path_filter):
     """Fetch all printers from Vasion API matching path_filter (paginated).
 
@@ -951,7 +1108,7 @@ def generate_random_delay(timing_mode, fixed_delay=1.0, min_delay=0.5, max_delay
 # Print job sending
 # ---------------------------------------------------------------------------
 
-def send_single_job(url, bearer_token, file_path, filename, username, printer, job_number, industry=''):
+def send_single_job(url, bearer_token, file_path, filename, username, printer, job_number, industry='', job_id=None):
     """Send a single print job from a file path. Returns a result dict."""
     try:
         headers = {}
@@ -961,12 +1118,17 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
         with open(file_path, 'rb') as f:
             file_content = f.read()
 
-        multipart_data = MultipartEncoder(fields={
+        fields = {
             'file': (filename, file_content, 'application/pdf'),
             'queue': printer,
             'copies': '1',
             'username': username
-        })
+        }
+        if job_id:
+            # Explicit text part so gateways don't drop the pre-assigned UUID
+            fields['jobID'] = (None, str(job_id))
+
+        multipart_data = MultipartEncoder(fields=fields)
         headers['Content-Type'] = multipart_data.content_type
 
         log(f"")
@@ -981,12 +1143,22 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
                 log(f"    {key}: {value}")
         log(f"    file: ({filename}, <{len(file_content)} bytes>, application/pdf)")
         log(f"    queue: {printer}  copies: 1  username: {username}")
+        if job_id:
+            log(f"    jobID: {job_id}")
 
         response = requests.post(url, headers=headers, data=multipart_data, timeout=30)
 
         log(f"    Status Code: {response.status_code}")
         log(f"    Response Body: {response.text[:1000] if response.text else '(empty)'}")
         log(f"{'='*60}")
+
+        returned_job_id = None
+        try:
+            returned_job_id = response.json().get('jobID')
+        except Exception:
+            pass
+        if job_id and returned_job_id and returned_job_id.lower() != job_id.lower():
+            log(f"  WARNING: requested jobID {job_id} but API returned {returned_job_id}")
 
         return {
             'job_number': job_number,
@@ -996,19 +1168,21 @@ def send_single_job(url, bearer_token, file_path, filename, username, printer, j
             'username': username,
             'printer': printer,
             'industry': industry,
+            'job_id': job_id,
+            'returned_job_id': returned_job_id,
             'response': response.text[:500] if response.text else ''
         }
     except requests.exceptions.Timeout:
         return {'job_number': job_number, 'success': False, 'status_code': None,
                 'filename': filename, 'username': username, 'printer': printer,
-                'industry': industry, 'response': 'Request timed out'}
+                'industry': industry, 'job_id': job_id, 'response': 'Request timed out'}
     except Exception as e:
         return {'job_number': job_number, 'success': False, 'status_code': None,
                 'filename': filename, 'username': username, 'printer': printer,
-                'industry': industry, 'response': str(e)}
+                'industry': industry, 'job_id': job_id, 'response': str(e)}
 
 
-def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, username, printer, job_number, industry=''):
+def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, username, printer, job_number, industry='', job_id=None):
     """Send a single print job from an in-memory BytesIO buffer. Returns a result dict."""
     try:
         headers = {}
@@ -1017,12 +1191,16 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
 
         file_content = file_buffer.read()
 
-        multipart_data = MultipartEncoder(fields={
+        fields = {
             'file': (filename, file_content, 'application/pdf'),
             'queue': printer,
             'copies': '1',
             'username': username
-        })
+        }
+        if job_id:
+            fields['jobID'] = (None, str(job_id))
+
+        multipart_data = MultipartEncoder(fields=fields)
         headers['Content-Type'] = multipart_data.content_type
 
         log(f"")
@@ -1037,12 +1215,22 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
                 log(f"    {key}: {value}")
         log(f"    file: ({filename}, <{len(file_content)} bytes>, application/pdf)")
         log(f"    queue: {printer}  copies: 1  username: {username}")
+        if job_id:
+            log(f"    jobID: {job_id}")
 
         response = requests.post(url, headers=headers, data=multipart_data, timeout=30)
 
         log(f"    Status Code: {response.status_code}")
         log(f"    Response Body: {response.text[:1000] if response.text else '(empty)'}")
         log(f"{'='*60}")
+
+        returned_job_id = None
+        try:
+            returned_job_id = response.json().get('jobID')
+        except Exception:
+            pass
+        if job_id and returned_job_id and returned_job_id.lower() != job_id.lower():
+            log(f"  WARNING: requested jobID {job_id} but API returned {returned_job_id}")
 
         return {
             'job_number': job_number,
@@ -1052,13 +1240,15 @@ def send_single_job_from_buffer(url, bearer_token, file_buffer, filename, userna
             'username': username,
             'printer': printer,
             'industry': industry,
+            'job_id': job_id,
+            'returned_job_id': returned_job_id,
             'response': response.text[:500] if response.text else ''
         }
     except requests.exceptions.Timeout:
         return {'job_number': job_number, 'success': False, 'status_code': None,
                 'filename': filename, 'username': username, 'printer': printer,
-                'industry': industry, 'response': 'Request timed out'}
+                'industry': industry, 'job_id': job_id, 'response': 'Request timed out'}
     except Exception as e:
         return {'job_number': job_number, 'success': False, 'status_code': None,
                 'filename': filename, 'username': username, 'printer': printer,
-                'industry': industry, 'response': str(e)}
+                'industry': industry, 'job_id': job_id, 'response': str(e)}

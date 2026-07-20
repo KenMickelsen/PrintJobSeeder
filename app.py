@@ -14,6 +14,7 @@ import time
 import uuid
 import logging
 import webbrowser
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify, Response
 from werkzeug.utils import secure_filename
 
@@ -26,6 +27,8 @@ from print_utils import (
     fetch_printers_from_api, generate_pdf, generate_random_delay,
     send_single_job, send_single_job_from_buffer
 )
+from batch_api import register_batch_routes
+
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +50,18 @@ job_sessions = {}
 
 # Available industries
 job_results = []
+
+
+def _build_batch_name(industry):
+    """Auto-generate a recognizable batch name for the Output Console."""
+    display = INDUSTRY_DISPLAY_NAMES.get(industry, industry)
+    # Strip emoji / leading symbols for a cleaner console label
+    clean = display.encode('ascii', 'ignore').decode().strip() or industry.title()
+    stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    return f"PrintJobSeeder — {clean} — {stamp}"
+
+
+register_batch_routes(app, app.config['UPLOAD_FOLDER'], _build_batch_name)
 
 
 @app.route('/')
