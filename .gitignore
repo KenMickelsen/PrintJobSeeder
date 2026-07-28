@@ -30,6 +30,7 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+*.pid
 
 # Uploaded files (if any get saved locally)
 uploads/

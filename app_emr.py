@@ -610,15 +610,17 @@ def run_server(open_browser=False):
     """
     if open_browser:
         threading.Timer(
-            1.5, lambda: webbrowser.open('http://localhost:5759')
+            1.5, lambda: webbrowser.open('http://127.0.0.1:5759')
         ).start()
 
+    # Bind to 127.0.0.1 (not localhost) to avoid IPv4/IPv6 mismatch on macOS.
     # threaded=True is required so SSE streaming responses don't block other
     # requests; use_reloader=False so this works when run from a thread.
-    app.run(debug=False, host='localhost', port=5759,
+    app.run(debug=False, host='127.0.0.1', port=5759,
             threaded=True, use_reloader=False)
 
 
 if __name__ == '__main__':
+    open_browser = '--no-browser' not in sys.argv
     log("Meridian Health EMR Demo starting on port 5759")
-    run_server(open_browser=True)
+    run_server(open_browser=open_browser)

@@ -1,4 +1,4 @@
-﻿"""
+"""
 launcher.py — Unified launcher for the Vasion print demo apps.
 
 On **Windows** (and Linux) a native Tkinter window is used — checkboxes to
@@ -54,7 +54,7 @@ APP_REGISTRY = [
         'label': 'Print Job Seeder',
         'description': 'Bulk print-job generator',
         'port': 5757,
-        'url': 'http://localhost:5757',
+        'url': 'http://127.0.0.1:5757',
         'run': seeder_app.run_server,
     },
     {
@@ -62,7 +62,7 @@ APP_REGISTRY = [
         'label': 'Apex Industrial ERP Demo',
         'description': 'Fake manufacturing ERP',
         'port': 5758,
-        'url': 'http://localhost:5758',
+        'url': 'http://127.0.0.1:5758',
         'run': erp_app.run_server,
     },
     {
@@ -70,7 +70,7 @@ APP_REGISTRY = [
         'label': 'Meridian Health EMR Demo',
         'description': 'Fake healthcare EMR',
         'port': 5759,
-        'url': 'http://localhost:5759',
+        'url': 'http://127.0.0.1:5759',
         'run': emr_app.run_server,
     },
     {
@@ -93,7 +93,7 @@ _printer_log_lock = threading.Lock()
 
 
 def _port_in_use(port):
-    """Return True if something is already listening on localhost:port."""
+    """Return True if something is already listening on 127.0.0.1:port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(0.25)
         return sock.connect_ex(('127.0.0.1', port)) == 0
@@ -323,7 +323,7 @@ def _run_tkinter_launcher():
 from flask import Flask, jsonify, render_template_string, request  # noqa: E402
 
 LAUNCHER_PORT = 5750
-LAUNCHER_URL  = f'http://localhost:{LAUNCHER_PORT}'
+LAUNCHER_URL  = f'http://127.0.0.1:{LAUNCHER_PORT}'
 
 # Keys of apps started this session (browser path only).
 _running      = set()
@@ -331,7 +331,9 @@ _running_lock = threading.Lock()
 
 launcher_app  = Flask(__name__)
 
-_PAGE = """<!doctype html>
+# Raw string: keep \n / \uXXXX for the embedded JavaScript (a normal
+# string would expand them and break the <script> block).
+_PAGE = r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -602,7 +604,7 @@ def _run_browser_launcher():
     threading.Thread(target=_open_panel, daemon=True).start()
 
     print(f"PrinterLogic Output Demo Launcher running at {LAUNCHER_URL}")
-    launcher_app.run(debug=False, host='localhost', port=LAUNCHER_PORT,
+    launcher_app.run(debug=False, host='127.0.0.1', port=LAUNCHER_PORT,
                      threaded=True, use_reloader=False)
 
 

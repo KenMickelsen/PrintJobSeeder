@@ -1875,7 +1875,11 @@
                 }
             } catch (error) {
                 console.error('Error saving settings:', error);
-                alert('Error saving settings');
+                alert(
+                    'Could not reach the Print Job Seeder server (connection refused).\n\n' +
+                    'The server may have stopped. Restart it with ./Start-PrintJobSeeder.sh ' +
+                    '(or the Windows start script), then try again.'
+                );
             }
         }
         

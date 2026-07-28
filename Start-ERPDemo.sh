@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start-ERPDemo.sh — Launch the Apex Industrial ERP Demo (Mac/Linux)
+# Start-ERPDemo.sh — Launch the Apex Industrial ERP Demo in the background (Mac/Linux)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -8,6 +8,11 @@ echo "=================================================="
 echo "         Apex Industrial ERP Demo"
 echo "=================================================="
 echo
+
+PID_FILE="erp_demo.pid"
+LOG_FILE="erp_demo.log"
+PORT=5758
+URL="http://127.0.0.1:${PORT}"
 
 # Check if Python 3 is installed
 if ! command -v python3 &>/dev/null; then
@@ -44,17 +49,64 @@ if ! python3 -c "import flask; import requests; import requests_toolbelt; import
   echo
 fi
 
-# Check if already running
-if lsof -i :5758 -sTCP:LISTEN -t &>/dev/null; then
-  echo "ERP Demo is already running on port 5758."
-  open "http://localhost:5758" 2>/dev/null || xdg-open "http://localhost:5758" 2>/dev/null || true
+_port_listening() {
+  python3 -c "import socket; s=socket.socket(); s.settimeout(0.5); s.connect(('127.0.0.1', $PORT)); s.close()" 2>/dev/null
+}
+
+# Already running via pid file
+if [ -f "$PID_FILE" ]; then
+  OLD_PID=$(cat "$PID_FILE")
+  if kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "ERP Demo is already running (PID $OLD_PID) on $URL"
+    open "$URL" 2>/dev/null || xdg-open "$URL" 2>/dev/null || true
+    exit 0
+  fi
+  rm -f "$PID_FILE"
+fi
+
+# Port already in use
+if _port_listening; then
+  echo "ERP Demo is already listening on port $PORT."
+  open "$URL" 2>/dev/null || xdg-open "$URL" 2>/dev/null || true
   exit 0
 fi
 
-echo "Starting Apex Industrial ERP Demo on http://localhost:5758..."
-echo "Press Ctrl+C to stop the server."
-echo "=================================================="
+# Clean up leftover processes from older foreground start scripts
+EXISTING=$(pgrep -f "python.*app_erp\.py" 2>/dev/null || true)
+if [ -n "$EXISTING" ]; then
+  echo "Stopping leftover instance(s) (PID: $EXISTING)..."
+  kill $EXISTING 2>/dev/null || true
+  sleep 1
+fi
+
+echo "Starting Apex Industrial ERP Demo on $URL..."
+nohup python3 app_erp.py --no-browser >> "$LOG_FILE" 2>&1 &
+echo $! > "$PID_FILE"
+PID=$(cat "$PID_FILE")
+
+READY=0
+for _ in $(seq 1 40); do
+  if _port_listening; then
+    READY=1
+    break
+  fi
+  if ! kill -0 "$PID" 2>/dev/null; then
+    break
+  fi
+  sleep 0.25
+done
+
+if [ "$READY" -ne 1 ]; then
+  echo "ERROR: Server failed to start. Check $LOG_FILE for details."
+  rm -f "$PID_FILE"
+  exit 1
+fi
+
+open "$URL" 2>/dev/null || xdg-open "$URL" 2>/dev/null || true
+
 echo
-
-python3 app_erp.py
-
+echo "ERP Demo is running in the background (PID $PID)."
+echo "  URL:  $URL"
+echo "  Log:  $LOG_FILE"
+echo "  Stop: ./Stop-ERPDemo.sh"
+echo "=================================================="

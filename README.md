@@ -33,7 +33,7 @@ PrinterLogicOutputDemo.exe --console
 ### Running on Mac
 
 1. Double-click **`PrinterLogicOutputDemo.app`** (or `PrinterLogicOutputDemo` binary)
-2. A browser tab opens at **http://localhost:5750** — the launcher control panel
+2. A browser tab opens at **http://127.0.0.1:5750** — the launcher control panel
 3. Tick the apps you want, then click **Launch**
 4. Each selected app opens in a new browser tab automatically
 5. Keep the launcher tab open while the apps are in use — clicking **Quit** stops everything
@@ -109,7 +109,7 @@ chmod +x Start-ERPDemo.sh Stop-ERPDemo.sh
 ./Start-ERPDemo.sh           # port 5758
 ```
 
-Shell scripts run in the background via `nohup`, writing logs to `printjobseeder.log` / `erp_demo.log` and saving a `.pid` file for clean shutdown via the corresponding stop script.
+Shell scripts start each app **in the background** via `nohup`, wait until the port is listening, then open the browser to `http://127.0.0.1:<port>`. They write logs to `printjobseeder.log` / `erp_demo.log` and save a `.pid` file for clean shutdown. You can close the Terminal window after start — the server keeps running until you stop it.
 
 To stop:
 ```bash
@@ -131,9 +131,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run individual apps
-python app.py          # Print Job Seeder  — http://localhost:5757
-python app_erp.py      # ERP Demo          — http://localhost:5758
-python app_emr.py      # EMR Demo          — http://localhost:5759
+python app.py          # Print Job Seeder  — http://127.0.0.1:5757
+python app_erp.py      # ERP Demo          — http://127.0.0.1:5758
+python app_emr.py      # EMR Demo          — http://127.0.0.1:5759
 
 # Or run the full launcher (Tkinter on Windows, browser on Mac)
 python launcher.py
@@ -252,7 +252,7 @@ Randomized delays that simulate real user behavior:
 
 ## Debugging & Logging
 
-Both apps write detailed request/response logs to `request_log.txt`.
+Both apps write detailed request/response logs to `request_log.txt`. Mac/Linux start scripts also write process logs to `printjobseeder.log` / `erp_demo.log`.
 
 **Watch live on Windows (PowerShell):**
 ```powershell
@@ -262,7 +262,23 @@ Get-Content "request_log.txt" -Wait -Tail 50
 **Watch live on Mac/Linux:**
 ```bash
 tail -f request_log.txt
+# or, for the background start-script log:
+tail -f printjobseeder.log
 ```
+
+### Connection refused when saving settings
+
+Save Settings only talks to the **local** demo server (not Vasion). If the browser reports connection refused:
+
+1. Confirm the server is still listening:
+```bash
+lsof -iTCP:5757 -sTCP:LISTEN
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5757/
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5757/
+```
+2. If nothing is listening, restart with `./Start-PrintJobSeeder.sh` (or the matching ERP script / Windows `.bat`).
+3. Prefer **http://127.0.0.1:5757** over `localhost` if one curl succeeds and the other fails (IPv4/IPv6 mismatch).
+4. Check `printjobseeder.log` for startup errors.
 
 ---
 
