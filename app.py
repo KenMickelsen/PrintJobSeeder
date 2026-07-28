@@ -430,6 +430,7 @@ def send_single_job_endpoint():
             bearer_token = data.get('bearer_token', '').strip()
             printer = data.get('printer', '').strip()
             industry = data.get('industry', 'healthcare')
+            requested_username = (data.get('username') or '').strip()
             pdf_source = 'generate'
             uploaded_file = None
         else:
@@ -437,6 +438,7 @@ def send_single_job_endpoint():
             bearer_token = request.form.get('bearer_token', '').strip()
             printer = request.form.get('printer', '').strip()
             industry = request.form.get('industry', 'healthcare')
+            requested_username = (request.form.get('username') or '').strip()
             pdf_source = request.form.get('pdf_source', 'generate')
             uploaded_file = request.files.get('file')
 
@@ -447,7 +449,9 @@ def send_single_job_endpoint():
         if industry not in INDUSTRIES:
             industry = 'healthcare'
 
-        username = random.choice(USERNAME_PRESETS.get(industry, USERNAME_PRESETS['healthcare']))
+        username = requested_username or random.choice(
+            USERNAME_PRESETS.get(industry, USERNAME_PRESETS['healthcare'])
+        )
 
         if pdf_source == 'upload' and uploaded_file and uploaded_file.filename:
             original_filename = secure_filename(uploaded_file.filename)

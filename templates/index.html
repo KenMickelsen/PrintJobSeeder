@@ -1576,7 +1576,7 @@
                 <div class="mode-content" id="mode-content-single">
                     <div class="card">
                         <h2>⚡ Single Job</h2>
-                        <p style="color: #888; margin-bottom: 20px;">Fetch your printer list, pick a printer and industry, then send one job at a time.</p>
+                        <p style="color: #888; margin-bottom: 20px;">Fetch your printer list, pick a printer and industry, optionally set a username/email, then send one job at a time.</p>
 
                         <div class="form-group">
                             <label>Printers <span class="hint">(grouped by vertical folder)</span></label>
@@ -1601,6 +1601,13 @@
                                 <label class="single-industry-label" for="single_ind_{{ industry }}">{{ industry_names[industry] }}</label>
                                 {% endfor %}
                             </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Username / Email <span class="hint">(leave blank for a random industry username)</span></label>
+                            <input type="text" id="singleJobUsername" list="singleJobUsernamePresets"
+                                   placeholder="e.g. jane.doe@company.com" autocomplete="off">
+                            <datalist id="singleJobUsernamePresets"></datalist>
                         </div>
 
                         <div class="form-group">
@@ -3385,6 +3392,7 @@
 
             const industryRadio = document.querySelector('.single-industry-radio:checked');
             const industry = industryRadio ? industryRadio.value : industries[0];
+            const username = (document.getElementById('singleJobUsername').value || '').trim();
 
             // Determine PDF source mode
             const activeToggle = document.querySelector('.single-pdf-toggle.active');
@@ -3421,6 +3429,7 @@
                         formData.append('bearer_token', token || '');
                         formData.append('printer', printer);
                         formData.append('industry', industry);
+                        formData.append('username', username);
                         formData.append('pdf_source', 'upload');
                         formData.append('file', uploadedFiles[i]);
 
@@ -3461,7 +3470,7 @@
                     const response = await fetch('/api/send-single-job', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url, bearer_token: token, printer, industry })
+                        body: JSON.stringify({ url, bearer_token: token, printer, industry, username })
                     });
 
                     const data = await response.json();
@@ -3501,6 +3510,21 @@
                 btn.textContent = '⚡ Send Job';
             }
         }
+
+        // Single Job - refresh username suggestions when industry changes
+        function updateSingleJobUsernamePresets() {
+            const industryRadio = document.querySelector('.single-industry-radio:checked');
+            const industry = industryRadio ? industryRadio.value : industries[0];
+            const datalist = document.getElementById('singleJobUsernamePresets');
+            if (!datalist) return;
+            const users = usernamePresets[industry] || [];
+            datalist.innerHTML = users.map(u => `<option value="${escapeHtml(u)}"></option>`).join('');
+        }
+
+        document.querySelectorAll('.single-industry-radio').forEach(radio => {
+            radio.addEventListener('change', updateSingleJobUsernamePresets);
+        });
+        updateSingleJobUsernamePresets();
 
         // Single Job - PDF source toggle
         document.querySelectorAll('.single-pdf-toggle').forEach(toggle => {
