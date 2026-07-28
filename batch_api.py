@@ -1,6 +1,6 @@
 """
 Batch job session routes for the Print Job Seeder.
-One Vasion batch per industry: open → parallel job submit → close (auto or manual).
+One Vasion batch to one printer: open → parallel job submit → close (auto or manual).
 """
 
 import os
@@ -29,12 +29,13 @@ _build_batch_name = None
 
 
 def _cleanup_batch_temp_files(temp_files):
-    for temp_path in (temp_files or {}).values():
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
+    for paths in (temp_files or {}).values():
+        for temp_path in paths:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
 
 def register_batch_routes(app, upload_folder, build_batch_name_fn):
@@ -45,7 +46,7 @@ def register_batch_routes(app, upload_folder, build_batch_name_fn):
 
     @app.route('/api/start-batch-jobs', methods=['POST'])
     def start_batch_jobs():
-        """Initialize a batch job session (one batch per industry) and return session ID."""
+        """Initialize a batch job session (one batch, one printer) and return session ID."""
         log("=== /api/start-batch-jobs called ===")
 
         try:
@@ -55,94 +56,90 @@ def register_batch_routes(app, upload_folder, build_batch_name_fn):
             if close_mode not in ('auto', 'manual'):
                 close_mode = 'auto'
 
-            industry_configs_json = request.form.get('industry_configs', '{}')
-            industry_configs = json.loads(industry_configs_json)
+            industry = request.form.get('industry', '').strip()
+            printer = request.form.get('printer', '').strip()
+            pdf_source = request.form.get('pdf_source', 'generate')
+            num_jobs = int(request.form.get('num_jobs', 0) or 0)
+            min_pages = int(request.form.get('min_pages', 1) or 1)
+            max_pages = int(request.form.get('max_pages', 15) or 15)
+            usernames = [u.strip() for u in request.form.get('usernames', '').split(',') if u.strip()]
+            filenames = [f.strip() for f in request.form.get('filenames', '').split(',') if f.strip()]
 
             if not url:
                 return jsonify({'success': False, 'error': 'URL is required'}), 400
-
-            if not industry_configs:
-                return jsonify({'success': False, 'error': 'At least one industry must be configured'}), 400
+            if not industry:
+                return jsonify({'success': False, 'error': 'An industry is required'}), 400
+            if not printer:
+                return jsonify({'success': False, 'error': 'A printer is required'}), 400
+            if not usernames:
+                return jsonify({'success': False, 'error': 'At least one username is required'}), 400
 
             base_url = get_api_base_url(url)
             if not base_url:
                 return jsonify({'success': False, 'error': 'Could not derive API base URL from print URL'}), 400
 
-            industry_batches = []
             temp_files = {}
-            total_jobs = 0
 
-            for industry, config in industry_configs.items():
-                num_jobs = int(config.get('num_jobs', 0))
+            if pdf_source == 'upload':
+                # The uploaded PDFs are the batch: one job per file, in the order listed
+                token = uuid.uuid4().hex[:8]
+                job_files = []
+                for index, file in enumerate(request.files.getlist('files')):
+                    if not file.filename:
+                        continue
+                    filename = secure_filename(file.filename)
+                    if not filename.lower().endswith('.pdf'):
+                        filename += '.pdf'
+                    temp_path = os.path.join(_upload_folder, f'batch_{token}_{index}_{filename}')
+                    file.save(temp_path)
+                    job_files.append((filename, temp_path))
+
+                if not job_files:
+                    return jsonify({'success': False, 'error': 'At least one PDF file must be uploaded'}), 400
+
+                temp_files[industry] = [path for _, path in job_files]
+            else:
                 if num_jobs <= 0:
-                    continue
-
-                usernames = [u.strip() for u in config.get('usernames', '').split(',') if u.strip()]
-                printers = [p.strip() for p in config.get('printers', '').split(',') if p.strip()]
-                filenames = [f.strip() for f in config.get('filenames', '').split(',') if f.strip()]
-                pdf_source = config.get('pdf_source', 'generate')
-                min_pages = int(config.get('min_pages', 1))
-                max_pages = int(config.get('max_pages', 15))
-
-                if not usernames:
-                    return jsonify({'success': False, 'error': f'{industry}: At least one username is required'}), 400
-                if not printers:
-                    return jsonify({'success': False, 'error': f'{industry}: At least one printer is required'}), 400
+                    return jsonify({'success': False, 'error': 'Number of jobs must be at least 1'}), 400
                 if not filenames:
-                    return jsonify({'success': False, 'error': f'{industry}: At least one filename is required'}), 400
+                    return jsonify({'success': False, 'error': 'At least one filename is required'}), 400
 
-                temp_path = None
-                if pdf_source == 'upload':
-                    file_key = f'file_{industry}'
-                    if file_key in request.files:
-                        file = request.files[file_key]
-                        if file.filename:
-                            original_filename = secure_filename(file.filename)
-                            temp_path = os.path.join(_upload_folder, f'batch_{industry}_{original_filename}')
-                            file.save(temp_path)
-                            temp_files[industry] = temp_path
-
-                    if not temp_path:
-                        return jsonify({'success': False, 'error': f'{industry}: No file uploaded'}), 400
-
-                jobs = []
+                job_files = []
                 for i in range(num_jobs):
                     filename = filenames[i % len(filenames)]
                     if not filename.lower().endswith('.pdf'):
                         filename += '.pdf'
-                    jobs.append({
-                        'industry': industry,
-                        'username': usernames[i % len(usernames)],
-                        'printer': printers[i % len(printers)],
-                        'filename': filename,
-                        'pdf_source': pdf_source,
-                        'min_pages': min_pages,
-                        'max_pages': max_pages,
-                        'temp_path': temp_path,
-                        'job_id': str(uuid.uuid4()),
-                        'job_number': total_jobs + i + 1
-                    })
+                    job_files.append((filename, None))
 
-                batch_id = str(uuid.uuid4())
-                batch_name = _build_batch_name(industry)
-                industry_batches.append({
+            jobs = []
+            for i, (filename, temp_path) in enumerate(job_files):
+                jobs.append({
                     'industry': industry,
-                    'batch_id': batch_id,
-                    'name': batch_name,
-                    'jobs': jobs,
-                    'job_ids': [j['job_id'] for j in jobs]
+                    'username': usernames[i % len(usernames)],
+                    'printer': printer,
+                    'filename': filename,
+                    'pdf_source': pdf_source,
+                    'min_pages': min_pages,
+                    'max_pages': max_pages,
+                    'temp_path': temp_path,
+                    'job_id': str(uuid.uuid4()),
+                    'job_number': i + 1
                 })
-                total_jobs += len(jobs)
 
-            if not industry_batches:
-                return jsonify({'success': False, 'error': 'No jobs to send'}), 400
+            batch = {
+                'industry': industry,
+                'batch_id': str(uuid.uuid4()),
+                'name': _build_batch_name(industry),
+                'jobs': jobs,
+                'job_ids': [j['job_id'] for j in jobs]
+            }
 
             session_id = str(uuid.uuid4())
             batch_sessions[session_id] = {
-                'batches': industry_batches,
+                'batches': [batch],
                 'results': [],
                 'status': 'ready',
-                'total': total_jobs,
+                'total': len(jobs),
                 'completed': 0,
                 'url': url,
                 'base_url': base_url,
@@ -159,8 +156,8 @@ def register_batch_routes(app, upload_folder, build_batch_name_fn):
             return jsonify({
                 'success': True,
                 'session_id': session_id,
-                'total_jobs': total_jobs,
-                'batch_count': len(industry_batches),
+                'total_jobs': len(jobs),
+                'batch_count': 1,
                 'close_mode': close_mode
             })
 

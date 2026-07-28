@@ -12,17 +12,111 @@ Adding a future app only requires appending an entry to APP_REGISTRY below.
 """
 
 import collections
+import os
 import queue
 import socket
+import subprocess
 import sys
 import threading
 import time
+import traceback
 import webbrowser
 
-import app as seeder_app
-import app_erp as erp_app
-import app_emr as emr_app
-import virtual_printer as vprinter
+# ---------------------------------------------------------------------------
+# Windowed .app bootstrap — must run before app imports that call print/log.
+# PyInstaller --windowed Mac apps have no console; crashes otherwise vanish.
+# ---------------------------------------------------------------------------
+LAUNCHER_PORT = 5750
+LAUNCHER_URL = f'http://127.0.0.1:{LAUNCHER_PORT}'
+
+
+def _mac_data_dir():
+    data_dir = os.path.join(
+        os.path.expanduser('~'), 'Library', 'Application Support',
+        'PrinterLogicOutputDemo',
+    )
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
+
+
+def _launcher_log_path():
+    if sys.platform == 'darwin':
+        return os.path.join(_mac_data_dir(), 'launcher.log')
+    if getattr(sys, 'frozen', False):
+        return os.path.join(os.path.dirname(os.path.abspath(sys.executable)),
+                            'launcher.log')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'launcher.log')
+
+
+def _bootstrap_stdio():
+    """Attach stdout/stderr to a log file for windowed / frozen launches."""
+    frozen = getattr(sys, 'frozen', False)
+    need_file = (
+        sys.stdout is None
+        or sys.stderr is None
+        or (frozen and sys.platform == 'darwin')
+    )
+    if not need_file:
+        return
+    log_path = _launcher_log_path()
+    log_fp = open(log_path, 'a', encoding='utf-8', buffering=1)
+    log_fp.write(f"\n--- launch {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+    log_fp.flush()
+    if sys.stdout is None or (frozen and sys.platform == 'darwin'):
+        sys.stdout = log_fp
+    if sys.stderr is None or (frozen and sys.platform == 'darwin'):
+        sys.stderr = log_fp
+
+
+def _show_mac_error(message):
+    """Show a native alert so Finder launches aren't completely silent."""
+    if sys.platform != 'darwin':
+        return
+    safe = (
+        str(message)
+        .replace('\\', '\\\\')
+        .replace('"', '\\"')
+        .replace('\n', '\\n')
+    )
+    # Keep AppleScript payloads short.
+    if len(safe) > 900:
+        safe = safe[:900] + '...'
+    try:
+        subprocess.run(
+            [
+                'osascript', '-e',
+                f'display alert "PrinterLogic Output Demo" message "{safe}" '
+                f'as critical',
+            ],
+            check=False,
+            timeout=60,
+        )
+    except Exception:
+        pass
+
+
+def _fatal(message, exc=None):
+    detail = message
+    if exc is not None:
+        detail = f"{message}\n\n{traceback.format_exc()}"
+    try:
+        print(detail, flush=True)
+    except Exception:
+        pass
+    log_hint = f"See log:\n{_launcher_log_path()}"
+    _show_mac_error(f"{message}\n\n{log_hint}")
+    sys.exit(1)
+
+
+_bootstrap_stdio()
+
+try:
+    import app as seeder_app
+    import app_erp as erp_app
+    import app_emr as emr_app
+    import virtual_printer as vprinter
+except Exception as exc:
+    _fatal('Failed to start (import error).', exc)
 
 # macOS ships Helvetica Neue; Windows ships Segoe UI.
 _FONT_FAMILY = 'Helvetica Neue' if sys.platform == 'darwin' else 'Segoe UI'
@@ -322,9 +416,6 @@ def _run_tkinter_launcher():
 
 from flask import Flask, jsonify, render_template_string, request  # noqa: E402
 
-LAUNCHER_PORT = 5750
-LAUNCHER_URL  = f'http://127.0.0.1:{LAUNCHER_PORT}'
-
 # Keys of apps started this session (browser path only).
 _running      = set()
 _running_lock = threading.Lock()
@@ -596,6 +687,13 @@ def api_quit():
 
 
 def _run_browser_launcher():
+    if _port_in_use(LAUNCHER_PORT):
+        _fatal(
+            f'Port {LAUNCHER_PORT} is already in use.\n'
+            'Another launcher instance may still be running.\n'
+            'Quit it (or kill the process) and try again.'
+        )
+
     threading.Thread(target=_drain_printer_log, daemon=True).start()
 
     def _open_panel():
@@ -603,7 +701,8 @@ def _run_browser_launcher():
         webbrowser.open(LAUNCHER_URL)
     threading.Thread(target=_open_panel, daemon=True).start()
 
-    print(f"PrinterLogic Output Demo Launcher running at {LAUNCHER_URL}")
+    print(f"PrinterLogic Output Demo Launcher running at {LAUNCHER_URL}",
+          flush=True)
     launcher_app.run(debug=False, host='127.0.0.1', port=LAUNCHER_PORT,
                      threaded=True, use_reloader=False)
 
@@ -613,11 +712,16 @@ def _run_browser_launcher():
 # ===========================================================================
 
 def main():
-    _maybe_attach_console()
-    if sys.platform == 'darwin':
-        _run_browser_launcher()
-    else:
-        _run_tkinter_launcher()
+    try:
+        _maybe_attach_console()
+        if sys.platform == 'darwin':
+            _run_browser_launcher()
+        else:
+            _run_tkinter_launcher()
+    except SystemExit:
+        raise
+    except Exception as exc:
+        _fatal('Failed to start.', exc)
 
 
 if __name__ == '__main__':

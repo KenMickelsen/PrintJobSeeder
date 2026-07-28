@@ -64,6 +64,97 @@ def _build_batch_name(industry):
 register_batch_routes(app, app.config['UPLOAD_FOLDER'], _build_batch_name)
 
 
+class JobConfigError(Exception):
+    """An industry configuration cannot produce jobs."""
+
+
+def save_uploaded_pdfs(industry):
+    """Save every PDF uploaded for an industry, keeping the order they were listed in.
+
+    Returns a list of (filename, temp_path) tuples.
+    """
+    token = uuid.uuid4().hex[:8]
+    saved = []
+    for index, file in enumerate(request.files.getlist(f'file_{industry}')):
+        if not file.filename:
+            continue
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith('.pdf'):
+            filename += '.pdf'
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{industry}_{token}_{index}_{filename}')
+        file.save(temp_path)
+        saved.append((filename, temp_path))
+    return saved
+
+
+def cleanup_temp_files(temp_files):
+    """Remove the uploaded PDFs saved for a session (industry -> list of paths)."""
+    for paths in (temp_files or {}).values():
+        for temp_path in paths:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+
+
+def build_jobs_from_configs(industry_configs):
+    """Build the flat job queue for bulk sending.
+
+    Generated jobs cycle the configured filenames, while uploaded PDFs produce
+    exactly one job per file. Returns (jobs, temp_files).
+    """
+    all_jobs = []
+    temp_files = {}
+
+    for industry, config in industry_configs.items():
+        pdf_source = config.get('pdf_source', 'generate')
+        num_jobs = int(config.get('num_jobs', 0))
+        if pdf_source == 'generate' and num_jobs <= 0:
+            continue
+
+        usernames = [u.strip() for u in config.get('usernames', '').split(',') if u.strip()]
+        printers = [p.strip() for p in config.get('printers', '').split(',') if p.strip()]
+        filenames = [f.strip() for f in config.get('filenames', '').split(',') if f.strip()]
+        min_pages = int(config.get('min_pages', 1))
+        max_pages = int(config.get('max_pages', 15))
+
+        if not usernames:
+            raise JobConfigError(f'{industry}: At least one username is required')
+        if not printers:
+            raise JobConfigError(f'{industry}: At least one printer is required')
+
+        if pdf_source == 'upload':
+            uploaded = save_uploaded_pdfs(industry)
+            if not uploaded:
+                raise JobConfigError(f'{industry}: At least one PDF file must be uploaded')
+            temp_files[industry] = [path for _, path in uploaded]
+            job_files = [(filename, path) for filename, path in uploaded]
+        else:
+            if not filenames:
+                raise JobConfigError(f'{industry}: At least one filename is required')
+            job_files = []
+            for i in range(num_jobs):
+                filename = filenames[i % len(filenames)]
+                if not filename.lower().endswith('.pdf'):
+                    filename += '.pdf'
+                job_files.append((filename, None))
+
+        for i, (filename, temp_path) in enumerate(job_files):
+            all_jobs.append({
+                'industry': industry,
+                'username': usernames[i % len(usernames)],
+                'printer': printers[i % len(printers)],
+                'filename': filename,
+                'pdf_source': pdf_source,
+                'min_pages': min_pages,
+                'max_pages': max_pages,
+                'temp_path': temp_path
+            })
+
+    return all_jobs, temp_files
+
+
 @app.route('/')
 def index():
     """Render the main web interface"""
@@ -340,7 +431,6 @@ def send_single_job_endpoint():
             printer = data.get('printer', '').strip()
             industry = data.get('industry', 'healthcare')
             pdf_source = 'generate'
-            custom_filename = ''
             uploaded_file = None
         else:
             url = request.form.get('url', '').strip()
@@ -348,7 +438,6 @@ def send_single_job_endpoint():
             printer = request.form.get('printer', '').strip()
             industry = request.form.get('industry', 'healthcare')
             pdf_source = request.form.get('pdf_source', 'generate')
-            custom_filename = request.form.get('custom_filename', '').strip()
             uploaded_file = request.files.get('file')
 
         if not url:
@@ -362,7 +451,7 @@ def send_single_job_endpoint():
 
         if pdf_source == 'upload' and uploaded_file and uploaded_file.filename:
             original_filename = secure_filename(uploaded_file.filename)
-            filename = custom_filename if custom_filename else original_filename
+            filename = original_filename
             if not filename.lower().endswith('.pdf'):
                 filename += '.pdf'
 
@@ -455,60 +544,10 @@ def start_jobs():
         if not industry_configs:
             return jsonify({'success': False, 'error': 'At least one industry must be configured'}), 400
         
-        # Build job queue from all industries
-        all_jobs = []
-        temp_files = {}  # Store uploaded files per industry
-        
-        for industry, config in industry_configs.items():
-            num_jobs = int(config.get('num_jobs', 0))
-            if num_jobs <= 0:
-                continue
-                
-            usernames = [u.strip() for u in config.get('usernames', '').split(',') if u.strip()]
-            printers = [p.strip() for p in config.get('printers', '').split(',') if p.strip()]
-            filenames = [f.strip() for f in config.get('filenames', '').split(',') if f.strip()]
-            pdf_source = config.get('pdf_source', 'generate')
-            min_pages = int(config.get('min_pages', 1))
-            max_pages = int(config.get('max_pages', 15))
-            
-            if not usernames:
-                return jsonify({'success': False, 'error': f'{industry}: At least one username is required'}), 400
-            if not printers:
-                return jsonify({'success': False, 'error': f'{industry}: At least one printer is required'}), 400
-            if not filenames:
-                return jsonify({'success': False, 'error': f'{industry}: At least one filename is required'}), 400
-            
-            # Handle file upload for this industry
-            temp_path = None
-            if pdf_source == 'upload':
-                file_key = f'file_{industry}'
-                if file_key in request.files:
-                    file = request.files[file_key]
-                    if file.filename:
-                        original_filename = secure_filename(file.filename)
-                        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{industry}_{original_filename}')
-                        file.save(temp_path)
-                        temp_files[industry] = temp_path
-                
-                if not temp_path:
-                    return jsonify({'success': False, 'error': f'{industry}: No file uploaded'}), 400
-            
-            # Create jobs for this industry
-            for i in range(num_jobs):
-                job = {
-                    'industry': industry,
-                    'username': usernames[i % len(usernames)],
-                    'printer': printers[i % len(printers)],
-                    'filename': filenames[i % len(filenames)],
-                    'pdf_source': pdf_source,
-                    'min_pages': min_pages,
-                    'max_pages': max_pages,
-                    'temp_path': temp_path
-                }
-                # Ensure filename ends with .pdf
-                if not job['filename'].lower().endswith('.pdf'):
-                    job['filename'] += '.pdf'
-                all_jobs.append(job)
+        try:
+            all_jobs, temp_files = build_jobs_from_configs(industry_configs)
+        except JobConfigError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
         
         if not all_jobs:
             return jsonify({'success': False, 'error': 'No jobs to send'}), 400
@@ -619,10 +658,7 @@ def stream_jobs(session_id):
                 session['status'] = 'stopped'
                 success_count = sum(1 for r in session['results'] if r['success'])
                 yield f"data: {json.dumps({'type': 'stopped', 'success_count': success_count, 'completed': session['completed'], 'total': total_jobs})}\n\n"
-                # Clean up temp files
-                for temp_path in temp_files.values():
-                    if temp_path and os.path.exists(temp_path):
-                        os.remove(temp_path)
+                cleanup_temp_files(temp_files)
                 return
             
             try:
@@ -698,10 +734,7 @@ def stream_jobs(session_id):
                 session['completed'] = i + 1
                 yield f"data: {json.dumps({'type': 'job_result', 'result': error_result, 'progress': (i + 1) / total_jobs * 100})}\n\n"
         
-        # Clean up temp files
-        for temp_path in temp_files.values():
-            if temp_path and os.path.exists(temp_path):
-                os.remove(temp_path)
+        cleanup_temp_files(temp_files)
         
         # Send completion message
         success_count = sum(1 for r in session['results'] if r['success'])
@@ -751,60 +784,10 @@ def send_jobs():
         if not industry_configs:
             return jsonify({'success': False, 'error': 'At least one industry must be configured'}), 400
         
-        # Build job queue from all industries
-        all_jobs = []
-        temp_files = {}  # Store uploaded files per industry
-        
-        for industry, config in industry_configs.items():
-            num_jobs = int(config.get('num_jobs', 0))
-            if num_jobs <= 0:
-                continue
-                
-            usernames = [u.strip() for u in config.get('usernames', '').split(',') if u.strip()]
-            printers = [p.strip() for p in config.get('printers', '').split(',') if p.strip()]
-            filenames = [f.strip() for f in config.get('filenames', '').split(',') if f.strip()]
-            pdf_source = config.get('pdf_source', 'generate')
-            min_pages = int(config.get('min_pages', 1))
-            max_pages = int(config.get('max_pages', 15))
-            
-            if not usernames:
-                return jsonify({'success': False, 'error': f'{industry}: At least one username is required'}), 400
-            if not printers:
-                return jsonify({'success': False, 'error': f'{industry}: At least one printer is required'}), 400
-            if not filenames:
-                return jsonify({'success': False, 'error': f'{industry}: At least one filename is required'}), 400
-            
-            # Handle file upload for this industry
-            temp_path = None
-            if pdf_source == 'upload':
-                file_key = f'file_{industry}'
-                if file_key in request.files:
-                    file = request.files[file_key]
-                    if file.filename:
-                        original_filename = secure_filename(file.filename)
-                        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{industry}_{original_filename}')
-                        file.save(temp_path)
-                        temp_files[industry] = temp_path
-                
-                if not temp_path:
-                    return jsonify({'success': False, 'error': f'{industry}: No file uploaded'}), 400
-            
-            # Create jobs for this industry
-            for i in range(num_jobs):
-                job = {
-                    'industry': industry,
-                    'username': usernames[i % len(usernames)],
-                    'printer': printers[i % len(printers)],
-                    'filename': filenames[i % len(filenames)],
-                    'pdf_source': pdf_source,
-                    'min_pages': min_pages,
-                    'max_pages': max_pages,
-                    'temp_path': temp_path
-                }
-                # Ensure filename ends with .pdf
-                if not job['filename'].lower().endswith('.pdf'):
-                    job['filename'] += '.pdf'
-                all_jobs.append(job)
+        try:
+            all_jobs, temp_files = build_jobs_from_configs(industry_configs)
+        except JobConfigError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
         
         if not all_jobs:
             return jsonify({'success': False, 'error': 'No jobs to send'}), 400
@@ -857,10 +840,7 @@ def send_jobs():
                 delay = generate_random_delay(timing_mode, fixed_delay, min_delay, max_delay)
                 time.sleep(delay)
         
-        # Clean up temp files
-        for temp_path in temp_files.values():
-            if temp_path and os.path.exists(temp_path):
-                os.remove(temp_path)
+        cleanup_temp_files(temp_files)
         
         job_results = results
         success_count = sum(1 for r in results if r['success'])

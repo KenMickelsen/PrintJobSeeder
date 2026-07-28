@@ -619,6 +619,100 @@
             display: block;
         }
 
+        /* Multi-PDF file list */
+        .pdf-file-picker {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .btn-add-pdfs {
+            padding: 8px 16px;
+            border: 1px solid rgba(0, 217, 255, 0.5);
+            border-radius: 8px;
+            background: rgba(0, 217, 255, 0.1);
+            color: #00d9ff;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        .btn-add-pdfs:hover {
+            background: rgba(0, 217, 255, 0.2);
+            border-color: #00d9ff;
+        }
+
+        .btn-clear-pdfs {
+            padding: 6px 12px;
+            border: 1px solid rgba(255, 68, 68, 0.4);
+            border-radius: 8px;
+            background: rgba(255, 68, 68, 0.08);
+            color: #ff8888;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+
+        .btn-clear-pdfs:hover {
+            background: rgba(255, 68, 68, 0.18);
+            border-color: rgba(255, 68, 68, 0.7);
+        }
+
+        .pdf-file-count {
+            color: #00d9ff;
+            font-size: 0.85em;
+        }
+
+        .pdf-file-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        .pdf-file-table th {
+            text-align: left;
+            padding: 6px 8px;
+            color: #888;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .pdf-file-table td {
+            padding: 8px;
+            color: #ddd;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            word-break: break-all;
+        }
+
+        .pdf-file-table .pdf-file-size {
+            color: #888;
+            white-space: nowrap;
+        }
+
+        .pdf-file-remove {
+            background: none;
+            border: none;
+            color: #ff6666;
+            cursor: pointer;
+            font-size: 1em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .pdf-file-remove:hover {
+            background: rgba(255, 68, 68, 0.15);
+        }
+
+        .pdf-file-empty {
+            color: #666;
+            font-size: 0.85em;
+            margin: 0;
+        }
+
         /* Settings Modal */
         .modal-overlay {
             display: none;
@@ -1520,12 +1614,8 @@
                         <!-- Upload section (hidden by default) -->
                         <div class="pdf-source-section" id="single-upload-section">
                             <div class="form-group">
-                                <label>PDF File</label>
-                                <input type="file" id="singleJobFileUpload" accept=".pdf">
-                            </div>
-                            <div class="form-group">
-                                <label>Filename <span class="hint">(optional — uses the uploaded file's name if blank)</span></label>
-                                <input type="text" id="singleJobCustomFilename" placeholder="e.g. Patient_Report_JSmith.pdf">
+                                <label>PDF Files <span class="hint">(one job per file, sent to the selected printer)</span></label>
+                                <div id="single-upload-file-list"></div>
                             </div>
                         </div>
 
@@ -1654,9 +1744,69 @@
                 <!-- Batch Jobs Content -->
                 <div class="mode-content" id="mode-content-batch" style="display: none;">
 
-            <!-- Batch Settings -->
+            <!-- Batch Configuration -->
             <div class="card">
-                <h2>📚 Batch Settings</h2>
+                <h2>📚 Batch Jobs</h2>
+                <p style="color: #888; margin-bottom: 20px;">One batch goes to one printer. Generate a set of documents, or upload the exact PDFs you want in the batch.</p>
+
+                <div class="form-group">
+                    <label>Printers <span class="hint">(grouped by vertical folder)</span></label>
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                        <button type="button" class="btn-get-printers" id="batchGetPrintersBtn">
+                            <span class="btn-text">📥 Get Printers from Vasion</span>
+                        </button>
+                        <span id="batchPrinterStatus" style="font-size: 0.85em;"></span>
+                    </div>
+                    <select class="printer-grouped-select" id="batchPrinterSelect" disabled>
+                        <option value="">-- Click "Get Printers" to load --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Industry <span class="hint">(determines document type and content)</span></label>
+                    <div class="single-job-industry-selector">
+                        {% for industry in industries %}
+                        <input type="radio" class="batch-industry-radio" id="batch_ind_{{ industry }}"
+                               name="batch_industry" value="{{ industry }}"
+                               {% if loop.first %}checked{% endif %}>
+                        <label class="single-industry-label" for="batch_ind_{{ industry }}">{{ industry_names[industry] }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Document Source</label>
+                    <div class="toggle-switch">
+                        <div class="toggle-option batch-pdf-toggle active" data-source="generate">⚡ Generate PDFs</div>
+                        <div class="toggle-option batch-pdf-toggle" data-source="upload">📁 Upload PDFs</div>
+                    </div>
+                </div>
+
+                <div class="pdf-source-section active" id="batch-generate-section">
+                    <div class="page-range" style="max-width: 400px;">
+                        <div class="form-group">
+                            <label>Min Pages</label>
+                            <input type="number" id="batchMinPages" value="1" min="1" max="15">
+                        </div>
+                        <span>to</span>
+                        <div class="form-group">
+                            <label>Max Pages</label>
+                            <input type="number" id="batchMaxPages" value="15" min="1" max="15">
+                        </div>
+                    </div>
+                    <div class="form-group" style="max-width: 200px;">
+                        <label>Number of Jobs</label>
+                        <input type="number" id="batchNumJobs" value="10" min="1" max="1000">
+                    </div>
+                </div>
+
+                <div class="pdf-source-section" id="batch-upload-section">
+                    <div class="form-group">
+                        <label>PDF Files <span class="hint">(the batch is exactly these files, one job each)</span></label>
+                        <div id="batch-upload-file-list"></div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>Batch Close Behavior</label>
                     <div class="toggle-switch">
@@ -1664,50 +1814,8 @@
                         <div class="toggle-option batch-close-toggle" data-mode="manual">Manually close batch</div>
                     </div>
                     <input type="hidden" id="batch_close_mode" value="auto">
-                </div>
-                <div class="timing-description" id="batch-close-description">
-                    After all jobs in an industry batch are submitted, the batch will be closed automatically so Output can release them for printing. Each selected industry gets its own batch.
-                </div>
-            </div>
-
-            <!-- Industry Selection (Batch) -->
-            <div class="card">
-                <h2>🏢 Select Industries</h2>
-
-                <div class="automate-toggle-container">
-                    <label class="checkbox-toggle">
-                        <input type="checkbox" id="batchAutomateAllToggle">
-                        <span class="slider"></span>
-                    </label>
-                    <label for="batchAutomateAllToggle">Automate All</label>
-                    <span style="color: #888; font-size: 0.9em;">— Auto-fetch printers and use presets for selected industries</span>
-
-                    <div class="automate-jobs-input" id="batchAutomateJobsInput">
-                        <label>Jobs per industry:</label>
-                        <input type="number" id="batchAutomateJobCount" value="10" min="1" max="1000">
-                    </div>
-                </div>
-
-                <div class="warning-box" id="batchAutomateWarning">
-                    ⚠️ <span>Automate All requires API Cloud Link to be configured for fetching printers.</span>
-                    <a id="openSettingsFromBatchAutomate" class="settings-link">Open Settings</a>
-                </div>
-
-                <p style="color: #888; margin-bottom: 15px;">Each selected industry is sent as its own batch (open → submit jobs → close), in order.</p>
-
-                <div class="industry-selector">
-                    {% for industry in industries %}
-                    <input type="checkbox" class="batch-industry-checkbox" id="batch_ind_{{ industry }}" data-industry="{{ industry }}">
-                    <label class="industry-label" for="batch_ind_{{ industry }}">{{ industry_names[industry] }}</label>
-                    {% endfor %}
-                </div>
-
-                <div class="tabs-container" id="batchIndustryTabs">
-                    <div class="tab-buttons" id="batchTabButtons"></div>
-                    <div id="batchTabContents">
-                        <div class="no-industries-message">
-                            👆 Select one or more industries above to configure batch print jobs
-                        </div>
+                    <div class="timing-description" id="batch-close-description">
+                        Once all jobs are submitted, the batch is closed automatically so Output can release them for printing.
                     </div>
                 </div>
             </div>
@@ -1719,7 +1827,7 @@
                     <button type="button" class="btn-close-batch" id="batchCloseBtn" style="display: none;" disabled>✅ Close Batch</button>
                     <button type="button" class="btn-cancel-batch" id="batchCancelBtn" style="display: none;">✖️ Cancel Batch</button>
                 </div>
-                <div class="batch-close-hint" id="batchCloseHint">Waiting for you to close the current industry batch before continuing…</div>
+                <div class="batch-close-hint" id="batchCloseHint">Waiting for you to close the batch…</div>
 
                 <div class="error-message" id="batchErrorMessage"></div>
 
@@ -2280,6 +2388,121 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // =====================================
+        // MULTI-PDF FILE LISTS
+        // Files accumulate across picks so PDFs can come from different folders.
+        // =====================================
+
+        const pdfFileStore = new Map();
+
+        function pdfFileListMarkup(key) {
+            return `
+                <div class="pdf-file-list" data-pdf-list="${key}">
+                    <div class="pdf-file-picker">
+                        <button type="button" class="btn-add-pdfs" data-pdf-add="${key}">➕ Add PDFs</button>
+                        <span class="pdf-file-count" data-pdf-count="${key}"></span>
+                        <button type="button" class="btn-clear-pdfs" data-pdf-clear="${key}" style="display: none;">Clear all</button>
+                    </div>
+                    <input type="file" accept=".pdf" multiple hidden data-pdf-input="${key}">
+                    <table class="pdf-file-table" data-pdf-table="${key}" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>PDF File</th>
+                                <th style="width: 110px;">Size</th>
+                                <th style="width: 60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <p class="pdf-file-empty" data-pdf-empty="${key}">
+                        No PDFs added yet — click "Add PDFs" as many times as you like to collect files from different folders.
+                    </p>
+                </div>`;
+        }
+
+        function getPdfFiles(key) {
+            return pdfFileStore.get(key) || [];
+        }
+
+        function clearPdfFiles(key) {
+            pdfFileStore.delete(key);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        function renderPdfFileList(key) {
+            const files = getPdfFiles(key);
+            const table = document.querySelector(`[data-pdf-table="${key}"]`);
+            const empty = document.querySelector(`[data-pdf-empty="${key}"]`);
+            const count = document.querySelector(`[data-pdf-count="${key}"]`);
+            const clearBtn = document.querySelector(`[data-pdf-clear="${key}"]`);
+            if (!table) return;
+
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = files.map((file, index) => `
+                <tr>
+                    <td>${escapeHtml(file.name)}</td>
+                    <td class="pdf-file-size">${formatFileSize(file.size)}</td>
+                    <td><button type="button" class="pdf-file-remove" data-pdf-remove="${key}" data-index="${index}" title="Remove">✕</button></td>
+                </tr>`).join('');
+
+            table.style.display = files.length ? 'table' : 'none';
+            if (empty) empty.style.display = files.length ? 'none' : 'block';
+            if (count) count.textContent = files.length ? `${files.length} PDF(s) selected` : '';
+            if (clearBtn) clearBtn.style.display = files.length ? 'inline-block' : 'none';
+        }
+
+        function addPdfFiles(key, fileList) {
+            const files = getPdfFiles(key).slice();
+            Array.from(fileList).forEach(file => {
+                const isDuplicate = files.some(existing =>
+                    existing.name === file.name &&
+                    existing.size === file.size &&
+                    existing.lastModified === file.lastModified
+                );
+                if (!isDuplicate) files.push(file);
+            });
+            pdfFileStore.set(key, files);
+            renderPdfFileList(key);
+        }
+
+        function attachPdfFileList(key) {
+            const addBtn = document.querySelector(`[data-pdf-add="${key}"]`);
+            const input = document.querySelector(`[data-pdf-input="${key}"]`);
+            const clearBtn = document.querySelector(`[data-pdf-clear="${key}"]`);
+            const table = document.querySelector(`[data-pdf-table="${key}"]`);
+            if (!addBtn || !input) return;
+
+            addBtn.addEventListener('click', () => input.click());
+            input.addEventListener('change', () => {
+                addPdfFiles(key, input.files);
+                // Reset so re-picking the same file still fires a change event
+                input.value = '';
+            });
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    clearPdfFiles(key);
+                    renderPdfFileList(key);
+                });
+            }
+            if (table) {
+                table.addEventListener('click', (e) => {
+                    const removeBtn = e.target.closest('.pdf-file-remove');
+                    if (!removeBtn) return;
+                    const files = getPdfFiles(key).slice();
+                    files.splice(parseInt(removeBtn.dataset.index), 1);
+                    pdfFileStore.set(key, files);
+                    renderPdfFileList(key);
+                });
+            }
+
+            renderPdfFileList(key);
+        }
         
         // Stop button handler
         document.getElementById('stopBtn').addEventListener('click', async () => {
@@ -2361,14 +2584,14 @@
                         <!-- Upload options -->
                         <div class="pdf-source-section" id="upload-section-${industry}">
                             <div class="form-group">
-                                <label>PDF File</label>
-                                <input type="file" class="file-upload" data-industry="${industry}" accept=".pdf">
+                                <label>PDF Files <span class="hint">(one job per file)</span></label>
+                                <div id="upload-file-list-${industry}"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Filenames -->
-                    <div class="tab-section">
+                    <div class="tab-section" id="filenames-section-${industry}">
                         <h3>📝 Filenames</h3>
                         <div class="form-group">
                             <button type="button" class="preset-btn use-preset-filenames" data-industry="${industry}">
@@ -2411,7 +2634,7 @@
                     </div>
 
                     <!-- Job Count -->
-                    <div class="tab-section">
+                    <div class="tab-section" id="jobs-section-${industry}">
                         <h3>🔢 Number of Jobs</h3>
                         <div class="form-group" style="max-width: 200px;">
                             <label>Jobs for ${displayName}</label>
@@ -2491,6 +2714,17 @@
             });
         }
 
+        // Uploaded files define the job count and filenames, so those sections are hidden
+        function applyBulkUploadVisibility(industry) {
+            if (automateAllEnabled) return;
+            const generateToggle = document.querySelector(`.pdf-toggle[data-industry="${industry}"][data-source="generate"]`);
+            const isUpload = generateToggle && !generateToggle.classList.contains('active');
+            const filenamesSection = document.getElementById(`filenames-section-${industry}`);
+            const jobsSection = document.getElementById(`jobs-section-${industry}`);
+            if (filenamesSection) filenamesSection.style.display = isUpload ? 'none' : 'block';
+            if (jobsSection) jobsSection.style.display = isUpload ? 'none' : 'block';
+        }
+
         // Attach event listeners for tab content elements
         function attachTabEventListeners() {
             // PDF source toggle
@@ -2507,7 +2741,18 @@
                     // Show/hide sections
                     document.getElementById(`generate-section-${industry}`).classList.toggle('active', source === 'generate');
                     document.getElementById(`upload-section-${industry}`).classList.toggle('active', source === 'upload');
+                    applyBulkUploadVisibility(industry);
                 });
+            });
+
+            // Multi-PDF upload lists
+            activeIndustries.forEach(industry => {
+                const container = document.getElementById(`upload-file-list-${industry}`);
+                if (container && !container.querySelector('.pdf-file-list')) {
+                    container.innerHTML = pdfFileListMarkup(`bulk-${industry}`);
+                    attachPdfFileList(`bulk-${industry}`);
+                }
+                applyBulkUploadVisibility(industry);
             });
             
             // Filename preset buttons
@@ -2529,7 +2774,7 @@
             });
             
             // Get Printers buttons
-            document.querySelectorAll('.btn-get-printers').forEach(btn => {
+            document.querySelectorAll('#tabContents .btn-get-printers').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const industry = btn.dataset.industry;
                     getPrintersForIndustry(industry, btn);
@@ -2582,6 +2827,7 @@
                     // Hide collapsed summary, show detailed sections
                     if (collapsedSummary) collapsedSummary.style.display = 'none';
                     sections.forEach(section => section.style.display = 'block');
+                    applyBulkUploadVisibility(industry);
                 }
             });
             
@@ -2735,6 +2981,7 @@
                     activeIndustries.add(industry);
                 } else {
                     activeIndustries.delete(industry);
+                    clearPdfFiles(`bulk-${industry}`);
                 }
                 updateTabs();
                 
@@ -2800,6 +3047,9 @@
                 const generateToggle = tabContent.querySelector(`.pdf-toggle[data-source="generate"]`);
                 const pdfSource = generateToggle && generateToggle.classList.contains('active') ? 'generate' : 'upload';
                 
+                // Uploaded files drive the job count: one job per file
+                const uploadedCount = getPdfFiles(`bulk-${industry}`).length;
+
                 configs[industry] = {
                     pdf_source: pdfSource,
                     min_pages: tabContent.querySelector('.min-pages').value,
@@ -2807,7 +3057,7 @@
                     filenames: tabContent.querySelector('.filenames-input').value,
                     usernames: tabContent.querySelector('.usernames-input').value,
                     printers: tabContent.querySelector('.printers-input').value,
-                    num_jobs: tabContent.querySelector('.num-jobs').value
+                    num_jobs: pdfSource === 'upload' ? String(uploadedCount) : tabContent.querySelector('.num-jobs').value
                 };
             });
             
@@ -2897,7 +3147,7 @@
             
             // Validate each industry config
             for (const [industry, config] of Object.entries(industryConfigs)) {
-                if (!config.filenames.trim()) {
+                if (config.pdf_source === 'generate' && !config.filenames.trim()) {
                     errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter filenames or use the preset.`;
                     errorMessage.classList.add('visible');
                     return;
@@ -2914,13 +3164,10 @@
                 }
                 
                 // Check file upload if needed
-                if (config.pdf_source === 'upload') {
-                    const fileInput = document.querySelector(`.file-upload[data-industry="${industry}"]`);
-                    if (!fileInput.files || fileInput.files.length === 0) {
-                        errorMessage.textContent = `Error: ${industryNames[industry]} - Please upload a PDF file.`;
-                        errorMessage.classList.add('visible');
-                        return;
-                    }
+                if (config.pdf_source === 'upload' && getPdfFiles(`bulk-${industry}`).length === 0) {
+                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please add at least one PDF file.`;
+                    errorMessage.classList.add('visible');
+                    return;
                 }
             }
             
@@ -2959,14 +3206,12 @@
             formData.append('max_delay', document.getElementById('max_delay').value);
             formData.append('industry_configs', JSON.stringify(industryConfigs));
             
-            // Add files for upload industries
+            // Add files for upload industries (one job per file, in listed order)
             activeIndustries.forEach(industry => {
-                const config = industryConfigs[industry];
-                if (config.pdf_source === 'upload') {
-                    const fileInput = document.querySelector(`.file-upload[data-industry="${industry}"]`);
-                    if (fileInput.files.length > 0) {
-                        formData.append(`file_${industry}`, fileInput.files[0]);
-                    }
+                if (industryConfigs[industry].pdf_source === 'upload') {
+                    getPdfFiles(`bulk-${industry}`).forEach(file => {
+                        formData.append(`file_${industry}`, file);
+                    });
                 }
             });
             
@@ -3036,11 +3281,12 @@
         // SINGLE JOB FUNCTIONALITY
         // =====================================
 
-        async function getSingleJobPrinters() {
-            const btn = document.getElementById('singleJobGetPrintersBtn');
+        // Shared by Single Job and Batch Jobs: fetch printers into a grouped dropdown
+        async function loadGroupedPrinters(buttonId, statusId, selectId) {
+            const btn = document.getElementById(buttonId);
             const btnText = btn.querySelector('.btn-text');
-            const statusSpan = document.getElementById('singleJobPrinterStatus');
-            const select = document.getElementById('singleJobPrinterSelect');
+            const statusSpan = document.getElementById(statusId);
+            const select = document.getElementById(selectId);
 
             btn.disabled = true;
             btnText.textContent = '⏳ Fetching...';
@@ -3104,6 +3350,14 @@
             }
         }
 
+        function getSingleJobPrinters() {
+            return loadGroupedPrinters('singleJobGetPrintersBtn', 'singleJobPrinterStatus', 'singleJobPrinterSelect');
+        }
+
+        function getBatchPrinters() {
+            return loadGroupedPrinters('batchGetPrintersBtn', 'batchPrinterStatus', 'batchPrinterSelect');
+        }
+
         async function sendSingleJob() {
             const btn = document.getElementById('sendSingleJobBtn');
             const resultDiv = document.getElementById('singleJobResult');
@@ -3137,15 +3391,13 @@
             const pdfSource = activeToggle ? activeToggle.dataset.source : 'generate';
 
             // Validate upload if needed
-            if (pdfSource === 'upload') {
-                const fileInput = document.getElementById('singleJobFileUpload');
-                if (!fileInput.files || fileInput.files.length === 0) {
-                    resultDiv.className = 'single-job-result error';
-                    resultDiv.innerHTML = `<div class="result-title">❌ No file selected</div>
-                        <div class="result-detail">Please select a PDF file to upload.</div>`;
-                    resultDiv.style.display = 'block';
-                    return;
-                }
+            const uploadedFiles = getPdfFiles('single');
+            if (pdfSource === 'upload' && uploadedFiles.length === 0) {
+                resultDiv.className = 'single-job-result error';
+                resultDiv.innerHTML = `<div class="result-title">❌ No files selected</div>
+                    <div class="result-detail">Please add at least one PDF file to upload.</div>`;
+                resultDiv.style.display = 'block';
+                return;
             }
 
             btn.disabled = true;
@@ -3158,54 +3410,83 @@
                     throw new Error('No URL configured for the selected destination. Please check Settings.');
                 }
 
-                let response;
                 if (pdfSource === 'upload') {
-                    const fileInput = document.getElementById('singleJobFileUpload');
-                    const customFilename = document.getElementById('singleJobCustomFilename').value.trim();
+                    const results = [];
 
-                    const formData = new FormData();
-                    formData.append('url', url);
-                    formData.append('bearer_token', token || '');
-                    formData.append('printer', printer);
-                    formData.append('industry', industry);
-                    formData.append('pdf_source', 'upload');
-                    formData.append('custom_filename', customFilename);
-                    formData.append('file', fileInput.files[0]);
+                    for (let i = 0; i < uploadedFiles.length; i++) {
+                        btn.textContent = `⏳ Sending ${i + 1}/${uploadedFiles.length}...`;
 
-                    response = await fetch('/api/send-single-job', {
-                        method: 'POST',
-                        body: formData
-                    });
+                        const formData = new FormData();
+                        formData.append('url', url);
+                        formData.append('bearer_token', token || '');
+                        formData.append('printer', printer);
+                        formData.append('industry', industry);
+                        formData.append('pdf_source', 'upload');
+                        formData.append('file', uploadedFiles[i]);
+
+                        try {
+                            const response = await fetch('/api/send-single-job', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const data = await response.json();
+                            results.push({ name: uploadedFiles[i].name, data });
+                        } catch (error) {
+                            results.push({ name: uploadedFiles[i].name, data: { success: false, error: error.message } });
+                        }
+                    }
+
+                    const successCount = results.filter(r => r.data.success).length;
+                    const failCount = results.length - successCount;
+
+                    if (successCount > 0) localStorage.setItem('pjs_lastPrinter', printer);
+
+                    const rows = results.map(r => {
+                        const icon = r.data.success ? '✅' : '❌';
+                        const detail = r.data.success
+                            ? `[${r.data.status_code}] ${escapeHtml(r.data.username || '')}`
+                            : escapeHtml(r.data.error || r.data.response || 'Unknown error');
+                        return `${icon} ${escapeHtml(r.name)} — ${detail}`;
+                    }).join('<br>');
+
+                    resultDiv.className = `single-job-result ${failCount === 0 ? 'success' : 'error'}`;
+                    resultDiv.innerHTML = `
+                        <div class="result-title">${failCount === 0 ? '✅' : '⚠️'} ${successCount}/${results.length} job(s) sent</div>
+                        <div class="result-detail">
+                            <strong>Printer:</strong> ${escapeHtml(printer)}<br>
+                            <strong>Industry:</strong> ${industryNames[industry] || industry}<br><br>
+                            ${rows}
+                        </div>`;
                 } else {
-                    response = await fetch('/api/send-single-job', {
+                    const response = await fetch('/api/send-single-job', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ url, bearer_token: token, printer, industry })
                     });
-                }
 
-                const data = await response.json();
+                    const data = await response.json();
 
-                if (data.success) {
-                    localStorage.setItem('pjs_lastPrinter', printer);
-                    resultDiv.className = 'single-job-result success';
-                    resultDiv.innerHTML = `
-                        <div class="result-title">✅ Job Sent Successfully</div>
-                        <div class="result-detail">
-                            <strong>Printer:</strong> ${escapeHtml(data.printer)}<br>
-                            <strong>File:</strong> ${escapeHtml(data.filename)}<br>
-                            <strong>User:</strong> ${escapeHtml(data.username)}<br>
-                            <strong>Industry:</strong> ${industryNames[data.industry] || data.industry}<br>
-                            <strong>Status:</strong> ${data.status_code}
-                        </div>`;
-                } else {
-                    resultDiv.className = 'single-job-result error';
-                    resultDiv.innerHTML = `
-                        <div class="result-title">❌ Job Failed</div>
-                        <div class="result-detail">
-                            ${data.status_code ? `<strong>Status:</strong> ${data.status_code}<br>` : ''}
-                            <strong>Error:</strong> ${escapeHtml(data.error || data.response || 'Unknown error')}
-                        </div>`;
+                    if (data.success) {
+                        localStorage.setItem('pjs_lastPrinter', printer);
+                        resultDiv.className = 'single-job-result success';
+                        resultDiv.innerHTML = `
+                            <div class="result-title">✅ Job Sent Successfully</div>
+                            <div class="result-detail">
+                                <strong>Printer:</strong> ${escapeHtml(data.printer)}<br>
+                                <strong>File:</strong> ${escapeHtml(data.filename)}<br>
+                                <strong>User:</strong> ${escapeHtml(data.username)}<br>
+                                <strong>Industry:</strong> ${industryNames[data.industry] || data.industry}<br>
+                                <strong>Status:</strong> ${data.status_code}
+                            </div>`;
+                    } else {
+                        resultDiv.className = 'single-job-result error';
+                        resultDiv.innerHTML = `
+                            <div class="result-title">❌ Job Failed</div>
+                            <div class="result-detail">
+                                ${data.status_code ? `<strong>Status:</strong> ${data.status_code}<br>` : ''}
+                                <strong>Error:</strong> ${escapeHtml(data.error || data.response || 'Unknown error')}
+                            </div>`;
+                    }
                 }
 
                 resultDiv.style.display = 'block';
@@ -3237,6 +3518,9 @@
             });
         });
 
+        document.getElementById('single-upload-file-list').innerHTML = pdfFileListMarkup('single');
+        attachPdfFileList('single');
+
         document.getElementById('singleJobGetPrintersBtn').addEventListener('click', getSingleJobPrinters);
         document.getElementById('sendSingleJobBtn').addEventListener('click', sendSingleJob);
         document.getElementById('singleJobPrinterSelect').addEventListener('change', function() {
@@ -3247,8 +3531,6 @@
         // BATCH JOBS
         // =====================================
 
-        let batchActiveIndustries = new Set();
-        let batchAutomateAllEnabled = false;
         let batchSessionId = null;
         let batchEventSource = null;
         let batchCompletedCount = 0;
@@ -3256,8 +3538,8 @@
         let batchTotalJobs = 0;
 
         const batchCloseDescriptions = {
-            auto: 'After all jobs in an industry batch are submitted, the batch will be closed automatically so Output can release them for printing. Each selected industry gets its own batch.',
-            manual: 'Jobs are submitted after each industry batch is opened. You must press Close Batch after each industry’s jobs are sent before the next industry batch starts.'
+            auto: 'Once all jobs are submitted, the batch is closed automatically so Output can release them for printing.',
+            manual: 'Jobs are submitted after the batch is opened. You must press Close Batch to release them for printing.'
         };
 
         document.querySelectorAll('.batch-close-toggle').forEach(toggle => {
@@ -3279,296 +3561,46 @@
             });
         });
 
-        function createBatchTabContent(industry) {
-            const displayName = industryNames[industry];
-            return `
-                <div class="tab-content batch-tab-content" id="batch-tab-${industry}" data-industry="${industry}">
-                    <div class="collapsed-summary" id="batch-collapsed-summary-${industry}" style="display: none;">
-                        <div class="status-item">
-                            <span class="status-icon ready" id="batch-printers-status-icon-${industry}">⏳</span>
-                            <span>Printers: <span id="batch-printers-status-${industry}">Will auto-fetch on send</span></span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-icon ready">✅</span>
-                            <span>Using ${displayName} filename &amp; username presets</span>
-                        </div>
-                    </div>
-
-                    <div class="tab-section">
-                        <h3>📄 PDF Source</h3>
-                        <div class="form-group">
-                            <div class="toggle-switch">
-                                <div class="toggle-option batch-pdf-toggle active" data-industry="${industry}" data-source="generate">⚡ Generate PDF</div>
-                                <div class="toggle-option batch-pdf-toggle" data-industry="${industry}" data-source="upload">📁 Upload File</div>
-                            </div>
-                        </div>
-                        <div class="pdf-source-section active" id="batch-generate-section-${industry}">
-                            <div class="row" style="max-width: 400px;">
-                                <div class="form-group">
-                                    <label>Min Pages</label>
-                                    <input type="number" class="batch-min-pages" data-industry="${industry}" value="1" min="1" max="15">
-                                </div>
-                                <span>to</span>
-                                <div class="form-group">
-                                    <label>Max Pages</label>
-                                    <input type="number" class="batch-max-pages" data-industry="${industry}" value="15" min="1" max="15">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pdf-source-section" id="batch-upload-section-${industry}">
-                            <div class="form-group">
-                                <label>PDF File</label>
-                                <input type="file" class="batch-file-upload" data-industry="${industry}" accept=".pdf">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-section">
-                        <h3>📝 Filenames</h3>
-                        <div class="form-group">
-                            <button type="button" class="preset-btn batch-use-preset-filenames" data-industry="${industry}">
-                                Use ${displayName} Preset
-                            </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Filenames <span class="hint">(comma-separated)</span></label>
-                            <textarea class="batch-filenames-input" data-industry="${industry}" placeholder="Enter filenames or use preset above..."></textarea>
-                        </div>
-                    </div>
-
-                    <div class="tab-section">
-                        <h3>👥 Usernames</h3>
-                        <div class="form-group">
-                            <button type="button" class="preset-btn batch-use-preset-usernames" data-industry="${industry}">
-                                Use ${displayName} Preset
-                            </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Usernames <span class="hint">(comma-separated)</span></label>
-                            <textarea class="batch-usernames-input" data-industry="${industry}" placeholder="Enter usernames or use preset above..."></textarea>
-                        </div>
-                    </div>
-
-                    <div class="tab-section">
-                        <h3>🖨️ Printers</h3>
-                        <div class="form-group">
-                            <button type="button" class="btn-get-printers batch-btn-get-printers" data-industry="${industry}">
-                                <span class="btn-text">📥 Get Printers from Vasion</span>
-                            </button>
-                            <div class="printer-fetch-result" id="batch-printer-result-${industry}" style="display: none;"></div>
-                        </div>
-                        <div class="form-group">
-                            <label>Printer Names <span class="hint">(comma-separated)</span></label>
-                            <textarea class="batch-printers-input" data-industry="${industry}" placeholder="HP Office, Canon Lobby, Xerox Dept A"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="tab-section">
-                        <h3>🔢 Number of Jobs</h3>
-                        <div class="form-group" style="max-width: 200px;">
-                            <label>Jobs for ${displayName}</label>
-                            <input type="number" class="batch-num-jobs" data-industry="${industry}" value="10" min="1" max="1000">
-                        </div>
-                    </div>
-                </div>
-            `;
+        // Uploaded PDFs define the batch, so the job count only applies to generated documents
+        function applyBatchSourceVisibility() {
+            const activeToggle = document.querySelector('.batch-pdf-toggle.active');
+            const source = activeToggle ? activeToggle.dataset.source : 'generate';
+            document.getElementById('batch-generate-section').classList.toggle('active', source === 'generate');
+            document.getElementById('batch-upload-section').classList.toggle('active', source === 'upload');
         }
 
-        function updateBatchTabs() {
-            const tabButtons = document.getElementById('batchTabButtons');
-            const tabContents = document.getElementById('batchTabContents');
-            tabButtons.innerHTML = '';
-            tabContents.querySelectorAll('.batch-tab-content').forEach(tab => tab.remove());
-
-            if (batchActiveIndustries.size === 0) {
-                tabContents.innerHTML = '<div class="no-industries-message">👆 Select one or more industries above to configure batch print jobs</div>';
-                return;
-            }
-
-            const noMsg = tabContents.querySelector('.no-industries-message');
-            if (noMsg) noMsg.remove();
-
-            let isFirst = true;
-            batchActiveIndustries.forEach(industry => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = `tab-btn batch-tab-btn${isFirst ? ' active' : ''}`;
-                btn.dataset.industry = industry;
-                btn.textContent = industryNames[industry];
-                btn.addEventListener('click', () => switchBatchTab(industry));
-                tabButtons.appendChild(btn);
-
-                tabContents.insertAdjacentHTML('beforeend', createBatchTabContent(industry));
-                const tabContent = document.getElementById(`batch-tab-${industry}`);
-                if (isFirst) tabContent.classList.add('active');
-
-                tabContent.querySelector('.batch-filenames-input').value = presets[industry].join(', ');
-                tabContent.querySelector('.batch-usernames-input').value = usernamePresets[industry].join(', ');
-                isFirst = false;
-            });
-
-            attachBatchTabEventListeners();
-            if (batchAutomateAllEnabled) toggleBatchAutomateAll(true);
-        }
-
-        function switchBatchTab(industry) {
-            document.querySelectorAll('.batch-tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.industry === industry);
-            });
-            document.querySelectorAll('.batch-tab-content').forEach(content => {
-                content.classList.toggle('active', content.dataset.industry === industry);
-            });
-        }
-
-        function attachBatchTabEventListeners() {
-            document.querySelectorAll('.batch-pdf-toggle').forEach(toggle => {
-                toggle.addEventListener('click', () => {
-                    const industry = toggle.dataset.industry;
-                    const source = toggle.dataset.source;
-                    document.querySelectorAll(`.batch-pdf-toggle[data-industry="${industry}"]`).forEach(t => {
-                        t.classList.toggle('active', t.dataset.source === source);
-                    });
-                    document.getElementById(`batch-generate-section-${industry}`).classList.toggle('active', source === 'generate');
-                    document.getElementById(`batch-upload-section-${industry}`).classList.toggle('active', source === 'upload');
+        document.querySelectorAll('.batch-pdf-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                document.querySelectorAll('.batch-pdf-toggle').forEach(t => {
+                    t.classList.toggle('active', t === toggle);
                 });
-            });
-
-            document.querySelectorAll('.batch-use-preset-filenames').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const industry = btn.dataset.industry;
-                    document.querySelector(`.batch-filenames-input[data-industry="${industry}"]`).value = presets[industry].join(', ');
-                });
-            });
-
-            document.querySelectorAll('.batch-use-preset-usernames').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const industry = btn.dataset.industry;
-                    document.querySelector(`.batch-usernames-input[data-industry="${industry}"]`).value = usernamePresets[industry].join(', ');
-                });
-            });
-
-            document.querySelectorAll('.batch-btn-get-printers').forEach(btn => {
-                btn.addEventListener('click', () => getBatchPrintersForIndustry(industryFromBtn(btn), btn));
-            });
-        }
-
-        function industryFromBtn(btn) {
-            return btn.dataset.industry;
-        }
-
-        async function getBatchPrintersForIndustry(industry, btn) {
-            const btnText = btn.querySelector('.btn-text');
-            const resultDiv = document.getElementById(`batch-printer-result-${industry}`);
-            btn.disabled = true;
-            btnText.textContent = '⏳ Fetching...';
-            try {
-                const response = await fetch(`/api/printers/${industry}`);
-                const data = await response.json();
-                if (data.success && data.printers.length > 0) {
-                    document.querySelector(`.batch-printers-input[data-industry="${industry}"]`).value = data.printers.join(', ');
-                    resultDiv.style.display = 'block';
-                    resultDiv.className = 'printer-fetch-result success';
-                    resultDiv.textContent = `✅ Loaded ${data.printers.length} printer(s)`;
-                    const statusSpan = document.getElementById(`batch-printers-status-${industry}`);
-                    const statusIcon = document.getElementById(`batch-printers-status-icon-${industry}`);
-                    if (statusSpan) statusSpan.textContent = `${data.printers.length} printer(s) loaded`;
-                    if (statusIcon) { statusIcon.textContent = '✅'; statusIcon.className = 'status-icon ready'; }
-                } else {
-                    resultDiv.style.display = 'block';
-                    resultDiv.className = 'printer-fetch-result error';
-                    resultDiv.textContent = `❌ ${data.error || 'No printers found'}`;
-                }
-            } catch (err) {
-                resultDiv.style.display = 'block';
-                resultDiv.className = 'printer-fetch-result error';
-                resultDiv.textContent = `❌ ${err.message}`;
-            } finally {
-                btn.disabled = false;
-                btnText.textContent = '📥 Get Printers from Vasion';
-            }
-        }
-
-        function updateBatchAutomateWarning() {
-            const warning = document.getElementById('batchAutomateWarning');
-            if (!warning) return;
-            const cloudConfigured = settingsCache && settingsCache.cloud_link && settingsCache.cloud_link.valid;
-            warning.style.display = cloudConfigured ? 'none' : 'block';
-            const checkbox = document.getElementById('batchAutomateAllToggle');
-            if (checkbox && !cloudConfigured) {
-                checkbox.disabled = true;
-                checkbox.checked = false;
-                batchAutomateAllEnabled = false;
-            } else if (checkbox && cloudConfigured) {
-                checkbox.disabled = false;
-            }
-        }
-
-        function toggleBatchAutomateAll(enabled) {
-            batchAutomateAllEnabled = enabled;
-            batchActiveIndustries.forEach(industry => {
-                const tabContent = document.getElementById(`batch-tab-${industry}`);
-                if (!tabContent) return;
-                const collapsedSummary = document.getElementById(`batch-collapsed-summary-${industry}`);
-                const sections = tabContent.querySelectorAll('.tab-section');
-                if (enabled) {
-                    if (collapsedSummary) collapsedSummary.style.display = 'block';
-                    sections.forEach(section => section.style.display = 'none');
-                } else {
-                    if (collapsedSummary) collapsedSummary.style.display = 'none';
-                    sections.forEach(section => section.style.display = 'block');
-                }
-            });
-            const jobsContainer = document.getElementById('batchAutomateJobsInput');
-            if (jobsContainer) jobsContainer.style.display = enabled ? 'flex' : 'none';
-        }
-
-        document.getElementById('batchAutomateAllToggle')?.addEventListener('change', async (e) => {
-            const enabled = e.target.checked;
-            toggleBatchAutomateAll(enabled);
-            if (enabled) {
-                for (const industry of batchActiveIndustries) {
-                    const btn = document.querySelector(`.batch-btn-get-printers[data-industry="${industry}"]`);
-                    if (btn) await getBatchPrintersForIndustry(industry, btn);
-                }
-            }
-        });
-
-        document.getElementById('openSettingsFromBatchAutomate')?.addEventListener('click', openSettingsModal);
-
-        document.querySelectorAll('.batch-industry-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', async () => {
-                const industry = checkbox.dataset.industry;
-                if (checkbox.checked) batchActiveIndustries.add(industry);
-                else batchActiveIndustries.delete(industry);
-                updateBatchTabs();
-                if (checkbox.checked && batchAutomateAllEnabled) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    const btn = document.querySelector(`.batch-btn-get-printers[data-industry="${industry}"]`);
-                    if (btn) await getBatchPrintersForIndustry(industry, btn);
-                }
+                applyBatchSourceVisibility();
             });
         });
 
-        function getBatchIndustryConfigs() {
-            const configs = {};
-            // Preserve checkbox/DOM order of industries
-            industries.forEach(industry => {
-                if (!batchActiveIndustries.has(industry)) return;
-                const tabContent = document.getElementById(`batch-tab-${industry}`);
-                if (!tabContent) return;
-                const generateToggle = tabContent.querySelector(`.batch-pdf-toggle[data-source="generate"]`);
-                const pdfSource = generateToggle && generateToggle.classList.contains('active') ? 'generate' : 'upload';
-                configs[industry] = {
-                    pdf_source: pdfSource,
-                    min_pages: tabContent.querySelector('.batch-min-pages').value,
-                    max_pages: tabContent.querySelector('.batch-max-pages').value,
-                    filenames: tabContent.querySelector('.batch-filenames-input').value,
-                    usernames: tabContent.querySelector('.batch-usernames-input').value,
-                    printers: tabContent.querySelector('.batch-printers-input').value,
-                    num_jobs: tabContent.querySelector('.batch-num-jobs').value
-                };
-            });
-            return configs;
+        document.getElementById('batch-upload-file-list').innerHTML = pdfFileListMarkup('batch');
+        attachPdfFileList('batch');
+
+        document.getElementById('batchGetPrintersBtn').addEventListener('click', getBatchPrinters);
+        document.getElementById('batchPrinterSelect').addEventListener('change', function() {
+            if (this.value) localStorage.setItem('pjs_lastPrinter', this.value);
+        });
+
+        function getBatchConfig() {
+            const industryRadio = document.querySelector('.batch-industry-radio:checked');
+            const activeToggle = document.querySelector('.batch-pdf-toggle.active');
+            const pdfSource = activeToggle ? activeToggle.dataset.source : 'generate';
+            const files = getPdfFiles('batch');
+
+            return {
+                industry: industryRadio ? industryRadio.value : industries[0],
+                pdfSource: pdfSource,
+                files: files,
+                printer: document.getElementById('batchPrinterSelect').value,
+                minPages: document.getElementById('batchMinPages').value,
+                maxPages: document.getElementById('batchMaxPages').value,
+                numJobs: pdfSource === 'upload' ? files.length : (parseInt(document.getElementById('batchNumJobs').value) || 0)
+            };
         }
 
         function resetBatchButtons() {
@@ -3635,7 +3667,7 @@
                         `<span class="details">📂 Opened batch <code>${escapeHtml(data.name)}</code> (${data.job_count} jobs) — <code>${escapeHtml(data.batch_id)}</code></span>`,
                         'success'
                     );
-                    progressText.textContent = `Batch open: ${industryNames[data.industry] || data.industry} — submitting ${data.job_count} job(s)...`;
+                    progressText.textContent = `Batch open — submitting ${data.job_count} job(s)...`;
                     closeBtn.disabled = true;
                     hint.classList.remove('visible');
                 }
@@ -3665,14 +3697,14 @@
                 }
                 else if (data.type === 'awaiting_close') {
                     appendBatchLog(
-                        `<span class="details">⏸️ Ready to close batch for ${industryNames[data.industry] || data.industry}: <code>${escapeHtml(data.name)}</code></span>`
+                        `<span class="details">⏸️ Ready to close batch: <code>${escapeHtml(data.name)}</code></span>`
                     );
-                    progressText.textContent = `Awaiting Close Batch for ${industryNames[data.industry] || data.industry}…`;
+                    progressText.textContent = 'Awaiting Close Batch…';
                     closeBtn.style.display = 'block';
                     closeBtn.disabled = false;
                     closeBtn.textContent = '✅ Close Batch';
                     hint.classList.add('visible');
-                    hint.textContent = `Close the ${industryNames[data.industry] || data.industry} batch to continue to the next industry (or finish).`;
+                    hint.textContent = 'Close the batch so Output can release the jobs for printing.';
                 }
                 else if (data.type === 'batch_closed') {
                     const ok = data.success === true;
@@ -3680,18 +3712,18 @@
                     const status = data.status_code != null ? ` [${data.status_code}]` : '';
                     if (ok) {
                         appendBatchLog(
-                            `<span class="details">🔒 Batch closed on Output for ${industryNames[data.industry] || data.industry} — <code>${escapeHtml(data.batch_id)}</code>${status}</span>`,
+                            `<span class="details">🔒 Batch closed on Output — <code>${escapeHtml(data.batch_id)}</code>${status}</span>`,
                             'success'
                         );
-                        progressText.textContent = `Batch closed for ${industryNames[data.industry] || data.industry}`;
+                        progressText.textContent = 'Batch closed';
                     } else {
                         appendBatchLog(
-                            `<span class="details">❌ Failed to close batch for ${industryNames[data.industry] || data.industry} — <code>${escapeHtml(data.batch_id)}</code>${status}${detail}</span>`,
+                            `<span class="details">❌ Failed to close batch — <code>${escapeHtml(data.batch_id)}</code>${status}${detail}</span>`,
                             'error'
                         );
-                        errorMessage.textContent = `Batch close failed for ${industryNames[data.industry] || data.industry}. Jobs may still be paused on Output. ${data.response || ''}`;
+                        errorMessage.textContent = `Batch close failed. Jobs may still be paused on Output. ${data.response || ''}`;
                         errorMessage.classList.add('visible');
-                        progressText.textContent = `Close failed for ${industryNames[data.industry] || data.industry}`;
+                        progressText.textContent = 'Close failed';
                     }
                     closeBtn.disabled = true;
                     hint.classList.remove('visible');
@@ -3819,61 +3851,22 @@
                 errorMessage.classList.add('visible');
                 return;
             }
-            if (batchActiveIndustries.size === 0) {
-                errorMessage.textContent = 'Error: Please select at least one industry.';
+            const config = getBatchConfig();
+
+            if (!config.printer) {
+                errorMessage.textContent = 'Error: Please click "Get Printers" and select a printer for this batch.';
                 errorMessage.classList.add('visible');
                 return;
             }
-
-            if (batchAutomateAllEnabled) {
-                submitBtn.textContent = '⏳ Fetching Printers...';
-                progressContainer.classList.add('visible');
-                progressText.textContent = 'Fetching printers from Vasion API...';
-                for (const industry of batchActiveIndustries) {
-                    const btn = document.querySelector(`.batch-btn-get-printers[data-industry="${industry}"]`);
-                    if (btn) await getBatchPrintersForIndustry(industry, btn);
-                    const printers = document.querySelector(`.batch-printers-input[data-industry="${industry}"]`)?.value?.trim();
-                    if (!printers) {
-                        errorMessage.textContent = `Error: ${industryNames[industry]} - No printers found. Check Settings folder paths.`;
-                        errorMessage.classList.add('visible');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = '🚀 Send Print Jobs';
-                        progressContainer.classList.remove('visible');
-                        return;
-                    }
-                }
-                const jobsPerIndustry = parseInt(document.getElementById('batchAutomateJobCount')?.value) || 10;
-                batchActiveIndustries.forEach(industry => {
-                    const jobsInput = document.querySelector(`.batch-num-jobs[data-industry="${industry}"]`);
-                    if (jobsInput) jobsInput.value = jobsPerIndustry;
-                });
+            if (config.pdfSource === 'upload' && config.files.length === 0) {
+                errorMessage.textContent = 'Error: Please add at least one PDF file for the batch.';
+                errorMessage.classList.add('visible');
+                return;
             }
-
-            const industryConfigs = getBatchIndustryConfigs();
-            for (const [industry, config] of Object.entries(industryConfigs)) {
-                if (!config.filenames.trim()) {
-                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter filenames or use the preset.`;
-                    errorMessage.classList.add('visible');
-                    return;
-                }
-                if (!config.usernames.trim()) {
-                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter usernames or use the preset.`;
-                    errorMessage.classList.add('visible');
-                    return;
-                }
-                if (!config.printers.trim()) {
-                    errorMessage.textContent = `Error: ${industryNames[industry]} - Please enter printer names.`;
-                    errorMessage.classList.add('visible');
-                    return;
-                }
-                if (config.pdf_source === 'upload') {
-                    const fileInput = document.querySelector(`.batch-file-upload[data-industry="${industry}"]`);
-                    if (!fileInput.files || fileInput.files.length === 0) {
-                        errorMessage.textContent = `Error: ${industryNames[industry]} - Please upload a PDF file.`;
-                        errorMessage.classList.add('visible');
-                        return;
-                    }
-                }
+            if (config.pdfSource === 'generate' && config.numJobs <= 0) {
+                errorMessage.textContent = 'Error: Please enter how many jobs to generate for the batch.';
+                errorMessage.classList.add('visible');
+                return;
             }
 
             const destConfig = await getDestinationUrlAndToken();
@@ -3885,7 +3878,7 @@
 
             errorMessage.classList.remove('visible');
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Sending Batches...';
+            submitBtn.textContent = '⏳ Sending Batch...';
             progressContainer.classList.add('visible');
             progressFill.style.width = '0%';
             resultsLog.innerHTML = '';
@@ -3903,25 +3896,24 @@
                 closeBtn.style.display = 'none';
             }
 
-            let totalJobs = 0;
-            for (const config of Object.values(industryConfigs)) {
-                totalJobs += parseInt(config.num_jobs) || 0;
-            }
-            progressText.textContent = `Preparing ${totalJobs} job(s) across ${batchActiveIndustries.size} batch(es)...`;
+            progressText.textContent = `Preparing a batch of ${config.numJobs} job(s) for ${config.printer}...`;
 
             const formData = new FormData();
             formData.append('url', destConfig.url);
             formData.append('bearer_token', destConfig.token || '');
             formData.append('close_mode', closeMode);
-            formData.append('industry_configs', JSON.stringify(industryConfigs));
-            Object.keys(industryConfigs).forEach(industry => {
-                if (industryConfigs[industry].pdf_source === 'upload') {
-                    const fileInput = document.querySelector(`.batch-file-upload[data-industry="${industry}"]`);
-                    if (fileInput.files.length > 0) {
-                        formData.append(`file_${industry}`, fileInput.files[0]);
-                    }
-                }
-            });
+            formData.append('industry', config.industry);
+            formData.append('printer', config.printer);
+            formData.append('pdf_source', config.pdfSource);
+            formData.append('usernames', (usernamePresets[config.industry] || []).join(', '));
+            if (config.pdfSource === 'upload') {
+                config.files.forEach(file => formData.append('files', file));
+            } else {
+                formData.append('num_jobs', String(config.numJobs));
+                formData.append('min_pages', config.minPages);
+                formData.append('max_pages', config.maxPages);
+                formData.append('filenames', (presets[config.industry] || []).join(', '));
+            }
 
             try {
                 const startResponse = await fetch('/api/start-batch-jobs', { method: 'POST', body: formData });
@@ -3931,7 +3923,7 @@
                 }
                 batchSessionId = startData.session_id;
                 batchTotalJobs = startData.total_jobs;
-                progressText.textContent = `Starting ${batchTotalJobs} job(s) in ${startData.batch_count} batch(es)...`;
+                progressText.textContent = `Starting a batch of ${batchTotalJobs} job(s)...`;
                 connectToBatchStream(batchSessionId, batchTotalJobs);
             } catch (error) {
                 errorMessage.textContent = `Error: ${error.message}`;
@@ -3940,14 +3932,6 @@
                 resetBatchButtons();
             }
         });
-
-        // Keep batch automate warning in sync with settings changes
-        const _prevUpdateAutomate = updateAutomateWarning;
-        updateAutomateWarning = function() {
-            _prevUpdateAutomate();
-            updateBatchAutomateWarning();
-        };
-        updateBatchAutomateWarning();
     </script>
 </body>
 </html>

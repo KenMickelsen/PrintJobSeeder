@@ -40,6 +40,14 @@ PrinterLogicOutputDemo.exe --console
 
 > **Gatekeeper prompt:** On first launch macOS may warn the app is from an unidentified developer. Right-click the app → **Open** → **Open** to allow it.
 
+> **If the Dock icon flashes and quits:** the windowed `.app` has no Terminal. Check
+> `~/Library/Application Support/PrinterLogicOutputDemo/launcher.log`, or run the
+> binary from Terminal to see errors:
+> ```bash
+> "/path/to/PrinterLogic Output Demo.app/Contents/MacOS/PrinterLogic Output Demo"
+> ```
+> A common cause is port **5750** still held by a previous instance.
+
 ---
 
 ## Option 2 — Build the Executable Yourself
@@ -187,8 +195,19 @@ Each industry uses a wildcard to query printers from the Vasion API by folder pa
 - **Multi-industry** — Healthcare, Manufacturing, Legal, Finance, Education
 - **Automate All mode** — fetches printers from Vasion and applies presets in one click
 - **On-the-fly PDF generation** — variable page counts with industry-appropriate content
+- **Multi-PDF upload** — add your own PDFs instead of generated ones; click **Add PDFs** as many times as you like to collect files from different folders, and remove individual rows from the file table
 - **Flexible timing** — fixed delays or randomized "natural" timing
 - **Real-time progress** with stop support and session persistence
+
+#### Job modes
+
+| Mode | Printers | Generated documents | Uploaded PDFs |
+|------|----------|--------------------|---------------|
+| **Single Job** | One printer from the grouped dropdown | One random document for the selected industry | One job per file, all to the selected printer |
+| **Bulk Jobs** | Per-industry printer list, assigned round-robin | Number of Jobs unique PDFs per industry | One job per file (Number of Jobs and the filename list are not used) |
+| **Batch Jobs** | One printer from the grouped dropdown | Number of Jobs documents cycling the industry presets | The uploaded files are the batch, one job each |
+
+Batch Jobs sends a single Vasion batch (open → submit jobs → close) to one printer, closed automatically or manually.
 
 ### 🏭 Apex Industrial ERP Demo (port 5758)
 
